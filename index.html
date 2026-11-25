@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f5b301">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Saha Defteri">
+<title>Saha Defteri</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: operatörün defteri, net ve kısa
+IDEA: iş makinesinin gösterge paneli
+PICTURE: büyük sayaç ve sonuç rakamları
+COLOUR/TYPE: makine sarısı, kömür siyahı; Archivo geniş
+LAYOUT: tek sütun, altta büyük sekmeler, büyük butonlar */
+:root{color-scheme:light dark;--bg:light-dark(#ecebe6,#141311);--card:light-dark(#fff,#1f1d1a);--ink:light-dark(#171614,#f1efe9);--mut:light-dark(#68645d,#a8a49b);--line:light-dark(#dcd9d2,#35322d);--y:#f5b301;--yk:#171614;--red:#c8371e;--grn:#2e7d32;--org:#d9780b}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 Archivo,system-ui,sans-serif;overflow-x:clip;padding-bottom:100px}
+header{position:sticky;top:0;z-index:5;background:var(--y);color:var(--yk);display:flex;align-items:center;gap:10px;padding:8px max(4vw,14px);padding-top:max(8px,env(safe-area-inset-top))}
+header b{font-stretch:118%;font-weight:800;font-size:22px;flex:1;letter-spacing:-.01em}
+.ib{background:none;border:0;color:inherit;width:48px;height:48px;border-radius:10px;cursor:pointer;display:grid;place-items:center}
+.ib svg{width:28px;height:28px}
+main{max-width:720px;margin:0 auto;padding:14px max(4vw,14px)}
+h1{font-size:30px;line-height:1.08;margin:8px 0 12px;font-stretch:112%;font-weight:800;text-wrap:balance}
+h2{font-size:19px;margin:0 0 10px;font-weight:800}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--line)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.btn{min-height:52px;padding:0 18px;border-radius:12px;border:0;font:inherit;font-weight:700;cursor:pointer;background:var(--line);color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;text-align:center}
+.btn.y{background:var(--y);color:var(--yk)}.btn.r{background:var(--red);color:#fff}.btn.g{background:var(--grn);color:#fff}
+.btn.big{min-height:76px;font-size:23px;width:100%}
+.btn.sm{min-height:44px;padding:0 12px;font-size:15px}
+.btn.full{width:100%}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.ib:focus-visible{outline:3px solid var(--y);outline-offset:2px}
+label{display:block;font-size:14px;color:var(--mut);margin:12px 0 4px;font-weight:600}
+input,select,textarea{width:100%;min-height:52px;font:inherit;font-size:18px;padding:10px 12px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea{min-height:90px}
+.list .it{display:flex;gap:10px;align-items:center;padding:14px 0;border-top:1px solid var(--line);cursor:pointer}
+.list .it:first-child{border-top:0}
+.mut{color:var(--mut);font-size:14px}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;text-align:right}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.st{background:var(--bg);border-radius:10px;padding:10px 12px}.st span{display:block;font-size:13px;color:var(--mut)}.st b{font-size:20px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pos{color:var(--grn)}.neg{color:var(--red)}
+.huge{font-size:clamp(46px,15vw,76px);font-weight:800;font-stretch:112%;line-height:1;font-variant-numeric:tabular-nums;text-align:center;margin:14px 0}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{background:none;border:0;font:inherit;font-size:13px;font-weight:700;color:var(--mut);padding:8px 0 10px;min-height:66px;cursor:pointer;position:relative}
+nav button svg{display:block;margin:0 auto 3px;width:27px;height:27px}
+nav button.on{color:var(--ink)}nav button.on svg{color:var(--y)}
+.dot{position:absolute;top:8px;left:calc(50% + 8px);width:11px;height:11px;border-radius:50%;background:var(--red)}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--line);vertical-align:middle}
+.res{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.res .st{background:var(--card);border:1px solid var(--line)}
+.res .main{grid-column:1/-1;background:var(--y);color:var(--yk);border-radius:14px;padding:16px}
+.res .main .v{font-size:clamp(36px,11vw,52px);font-weight:800;font-stretch:112%;line-height:1.05;display:block;margin:4px 0}
+.g2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.g2.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g2.wide{grid-template-columns:1fr 2fr}
+.empty{text-align:center;color:var(--mut);padding:24px 8px}
+table{width:100%;border-collapse:collapse;font-size:15px}td,th{padding:6px 4px;text-align:left}td input{min-height:46px;font-size:17px}
+.wx .d{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-top:1px solid var(--line)}.wx .d:first-of-type{border-top:0}
+.warn{background:light-dark(#fff1d6,#3a2c0c);border-left:5px solid var(--org);padding:10px 12px;border-radius:8px;margin:8px 0;font-weight:700}
+@media(prefers-reduced-motion:no-preference){.huge.run{animation:p 2s infinite}@keyframes p{50%{opacity:.7}}}
+</style>
+</head>
+<body>
+<header><b>Saha Defteri</b><button class="ib" onclick="A.go('ayar')" aria-label="Ayarlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button></header>
+<main id="app"></main>
+<nav id="nav"></nav>
+<script>
+{
+const K='sahaDefteri_v1';
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tl=n=>Math.round(n||0).toLocaleString('tr-TR')+' ₺';
+const nf=(n,d=1)=>(+n||0).toLocaleString('tr-TR',{maximumFractionDigits:d});
+const P=v=>{v=String(v??'').trim().replace(/\s|₺/g,'');if(!v)return 0;if(v.includes(','))v=v.replace(/\./g,'').replace(',','.');else if(/^\d{1,3}(\.\d{3})+$/.test(v))v=v.replace(/\./g,'');const n=parseFloat(v);return isNaN(n)?0:n};
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const fd=s=>s?s.split('-').reverse().join('.'):'';
+const dur=ms=>{const s=Math.max(0,Math.floor(ms/1000));return[s/3600|0,(s%3600)/60|0,s%60].map(x=>String(x).padStart(2,'0')).join(':')};
+const hm=t=>new Date(t).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+const MATS={toprak:['Toprak',25,90],kum:['Kum',12,95],cakil:['Çakıl',12,95],kil:['Kil',35,90],kaya:['Kaya (patlatılmış)',60,130]};
+const defMats=()=>Object.fromEntries(Object.entries(MATS).map(([k,v])=>[k,{sw:v[1],cp:v[2]}]));
+function def(){
+  const m=(mc,name,every)=>({id:uid(),m:mc,name,kind:'meter',every,last:0});
+  return{customers:[],jobs:[],entries:[],sessions:[],trips:[],timer:null,
+    machines:[{id:'beko',name:'JCB Bekoloder',unit:'saat',meter:0},{id:'kamyon',name:'827 Pro Kamyon',unit:'km',meter:0}],
+    maint:[m('beko','Gresleme',10),m('beko','Motor yağı + filtre',250),m('beko','Yakıt filtresi',500),m('beko','Hava filtresi',500),m('beko','Hidrolik yağ + filtre',1000),
+      m('kamyon','Motor yağı + filtre',15000),m('kamyon','Yakıt filtresi',30000),m('kamyon','Hava filtresi',30000),
+      {id:uid(),m:'kamyon',name:'Araç muayenesi',kind:'date',due:''},{id:uid(),m:'kamyon',name:'Trafik sigortası',kind:'date',due:''}],
+    settings:{kasa:16,mats:defMats()},
+    calc:{mat:'toprak',st:'yer',mode:'olcu',en:'',boy:'',der:'',m3:'',fiyat:''},tripJob:''};
+}
+let D=null;try{D=JSON.parse(localStorage.getItem(K))}catch(e){}
+if(!D||!D.machines)D=def();
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(D))}catch(e){}};
+const mac=id=>D.machines.find(m=>m.id===id);
+const cust=id=>D.customers.find(c=>c.id===id);
+const job=id=>D.jobs.find(j=>j.id===id);
+const sum=(a,f)=>a.reduce((s,x)=>s+(+f(x)||0),0);
+function jt(jid){
+  const e=D.entries.filter(x=>x.job===jid),j=job(jid);
+  const hak=sum(e.filter(x=>x.t==='hak'),x=>x.amt),gid=sum(e.filter(x=>x.t==='gid'),x=>x.amt),ag=+(j&&j.agreed)||0;
+  return{hak,gid,kar:hak-gid,ag,alacak:ag?Math.max(0,ag-hak):0,saat:sum(D.sessions.filter(s=>s.job===jid),s=>s.h),sefer:sum(D.trips.filter(t=>t.job===jid),t=>t.n)};
+}
+function ct(cid){const js=D.jobs.filter(j=>j.cust===cid).map(j=>jt(j.id));return{hak:sum(js,x=>x.hak),gid:sum(js,x=>x.gid),kar:sum(js,x=>x.kar),alacak:sum(js,x=>x.alacak),n:js.length}}
+const waNum=p=>{let d=String(p||'').replace(/\D/g,'');if(!d)return'';if(d.startsWith('0'))d=d.slice(1);if(d.length===10)d='90'+d;return d};
+
+let ST=[{p:'musteri'}],F=null;
+const cur=()=>ST[ST.length-1];
+const A={};window.A=A;
+A.go=(p,id)=>{ST.push({p,id});render();scrollTo(0,0)};
+A.back=()=>{if(ST.length>1)ST.pop();render();scrollTo(0,0)};
+A.tab=p=>{ST=[{p}];render();scrollTo(0,0)};
+const back=`<button class="btn sm" onclick="A.back()">‹ Geri</button>`;
+const stat=(l,v,c='')=>`<div class="st"><span>${l}</span><b class="${c}">${v}</b></div>`;
+const sel=(id,opts,val)=>`<select id="${id}">${opts.map(([v,t])=>`<option value="${esc(v)}"${v==val?' selected':''}>${esc(t)}</option>`).join('')}</select>`;
+const arm=(b,txt)=>{if(b.dataset.arm)return true;b.dataset.arm=1;const o=b.textContent;b.textContent=txt||'Emin misin? Tekrar bas';setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent=o}},3000);return false};
+
+/* ---------- Formlar ---------- */
+A.form=(title,fields,onSave,del)=>{F={title,fields,onSave,del};A.go('form')};
+function vForm(){
+  return `<div class="row">${back}</div><h1>${esc(F.title)}</h1><form id="ff" class="card" novalidate>${F.fields.map(f=>f.type==='hid'?`<input type="hidden" id="f_${f.k}" value="${esc(f.v??'')}">`:`<label for="f_${f.k}">${esc(f.l)}${f.req?' *':''}</label>`+
+    (f.opts?sel('f_'+f.k,f.opts,f.v):f.type==='loc'?locField(f):f.type==='area'?`<textarea id="f_${f.k}">${esc(f.v)}</textarea>`:
+    `<input id="f_${f.k}" type="${f.type==='number'?'text':(f.type||'text')}"${f.type==='number'?' inputmode="decimal"':''} value="${esc(f.v??'')}">`)).join('')}
+    <button class="btn y full" type="submit" style="margin-top:18px">Kaydet</button></form>
+    ${F.del?`<button class="btn sm r" onclick="A.del(this,'${F.del[0]}','${F.del[1]}')">Sil</button>`:''}`;
+}
+A.newCust=id=>{const c=id?cust(id):{};A.form(id?'Müşteriyi düzenle':'Yeni müşteri',[{k:'name',l:'Ad / firma',req:1,v:c.name},{k:'phone',l:'Telefon',type:'tel',v:c.phone},{k:'addr',l:'Adres / yer',v:c.addr},{k:'note',l:'Not',type:'area',v:c.note}],
+  v=>{if(id)Object.assign(c,v);else D.customers.push({id:uid(),...v})})};
+A.newJob=(cid,id)=>{const j=id?job(id):{date:today()};A.form(id?'İşi düzenle':'Yeni iş',[{k:'name',l:'İşin adı (örn. temel kazısı)',req:1,v:j.name},{k:'date',l:'Başlangıç tarihi',type:'date',v:j.date},{k:'agreed',l:'Anlaşılan ücret (₺) — boş bırakabilirsin',type:'number',v:j.agreed||''},{k:'place',l:'Yer (hava durumu için)',type:'loc',v:j.place},{k:'loc',type:'hid',v:j.lat!=null?j.lat+', '+j.lon:''},{k:'note',l:'Not',type:'area',v:j.note}],
+  v=>{const m=String(v.loc||'').match(/(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)/);v.lat=m?+m[1]:null;v.lon=m?+m[2]:null;delete v.loc;if(id){Object.assign(j,v);if(D.wx)delete D.wx[id]}else D.jobs.push({id:uid(),cust:cid,done:false,...v})})};
+A.newEnt=(jid,t,id)=>{
+  const e=id?D.entries.find(x=>x.id===id):{date:today()};
+  const f=t==='gid'?[{k:'cat',l:'Ne için',opts:['Mazot','İşçilik','Parça / tamir','Yemek','Nakliye','Diğer'].map(x=>[x,x]),v:e.cat},{k:'amt',l:'Tutar (₺)',type:'number',req:1,v:e.amt},{k:'lt',l:'Mazot ise kaç litre (isteğe bağlı)',type:'number',v:e.lt||''}]
+    :[{k:'amt',l:'Alınan tutar (₺)',type:'number',req:1,v:e.amt},{k:'cat',l:'Ödeme şekli',opts:['Nakit','Havale / EFT','Çek / senet','Diğer'].map(x=>[x,x]),v:e.cat}];
+  f.push({k:'date',l:'Tarih',type:'date',v:e.date},{k:'note',l:'Not',v:e.note});
+  A.form((id?'Düzenle: ':'')+(t==='gid'?'Harcama':'Hakediş'),f,v=>{if(id)Object.assign(e,v);else D.entries.push({id:uid(),job:jid,t,...v})},id?['ent',id]:null);
+};
+A.del=(b,kind,id)=>{
+  if(!arm(b))return;
+  if(kind==='cust'){const js=D.jobs.filter(j=>j.cust===id).map(j=>j.id);D.entries=D.entries.filter(e=>!js.includes(e.job));D.jobs=D.jobs.filter(j=>j.cust!==id);D.customers=D.customers.filter(c=>c.id!==id);save();A.back();return}
+  if(kind==='job'){D.entries=D.entries.filter(e=>e.job!==id);D.jobs=D.jobs.filter(j=>j.id!==id);save();A.back();return}
+  if(kind==='ent')D.entries=D.entries.filter(e=>e.id!==id);
+  if(kind==='ses'){const s=D.sessions.find(x=>x.id===id),M=s&&mac(s.m);if(M&&M.unit==='saat')M.meter=Math.max(0,+(M.meter-s.h).toFixed(2));D.sessions=D.sessions.filter(x=>x.id!==id)}
+  if(kind==='mt')D.maint=D.maint.filter(x=>x.id!==id);
+  if(kind==='all'){D=def();save();ST=[{p:'musteri'}];render();return}
+  save();if(cur().p==='form'){F=null;ST.pop()}render();
+};
+A.done=id=>{const j=job(id);j.done=!j.done;save();render()};
+A.demo=()=>{const c={id:uid(),name:'Örnek: Yılmaz İnşaat',phone:'0532 000 00 00',addr:'Bor, Niğde',note:''};D.customers.push(c);const j={id:uid(),cust:c.id,name:'Temel kazısı',date:today(),agreed:60000,place:'Sanayi',done:false};D.jobs.push(j);
+  D.entries.push({id:uid(),job:j.id,t:'gid',cat:'Mazot',amt:8500,lt:200,date:today(),note:''},{id:uid(),job:j.id,t:'hak',cat:'Nakit',amt:40000,date:today(),note:'İlk ödeme'});save();render()};
+
+/* ---------- Konum + hava ---------- */
+const locField=f=>`<input id="f_${f.k}" value="${esc(f.v??'')}" placeholder="Köy veya ilçe adı yaz (örn. Bor)" autocomplete="off" oninput="A.lq()"><div id="locRes"></div><div class="row" style="margin-top:8px"><button type="button" class="btn sm" onclick="A.gps()">GPS ile al</button><span class="mut" id="locMsg">${(F.fields.find(x=>x.k==='loc')||{}).v?'Konum kayıtlı ✓':'Listeden bir yer seç'}</span></div>`;
+let lqR=[],lqT=0;
+A.lq=()=>{const h=document.getElementById('f_loc');if(h)h.value='';lmsg('Listeden bir yer seç');clearTimeout(lqT);const q=document.getElementById('f_place').value.trim(),box=document.getElementById('locRes');if(q.length<2){box.innerHTML='';return}lqT=setTimeout(async()=>{try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=5&language=tr&countryCode=TR&name='+encodeURIComponent(q));const d=await r.json();lqR=(d.results||[]).map(x=>({n:[...new Set([x.name,x.admin2,x.admin1].filter(Boolean))].join(', '),a:x.latitude,o:x.longitude}));box.innerHTML=lqR.length?lqR.map((x,i)=>`<button type="button" class="btn full" style="justify-content:flex-start;margin-top:6px;min-height:46px" onclick="A.pick(${i})">${esc(x.n)}</button>`).join(''):'<p class="mut">Bulunamadı. Daha genel yaz (ilçe adı) ya da GPS kullan.</p>'}catch(e){box.innerHTML='<p class="mut">İnternet yok. GPS ile alabilirsin.</p>'}},400)};
+A.pick=i=>{const x=lqR[i];document.getElementById('f_place').value=x.n;document.getElementById('f_loc').value=x.a.toFixed(5)+', '+x.o.toFixed(5);document.getElementById('locRes').innerHTML='';lmsg('Konum seçildi ✓')};
+const lmsg=t=>{const e=document.getElementById('locMsg');if(e)e.textContent=t};
+A.gps=()=>{if(!navigator.geolocation)return lmsg('Bu telefon konumu desteklemiyor.');lmsg('Konum aranıyor…');navigator.geolocation.getCurrentPosition(p=>{document.getElementById('f_loc').value=p.coords.latitude.toFixed(5)+', '+p.coords.longitude.toFixed(5);const pl=document.getElementById('f_place');if(!pl.value.trim())pl.value='GPS konumu';document.getElementById('locRes').innerHTML='';lmsg('Konum alındı ✓')},()=>lmsg('Konum alınamadı. Telefonda konum iznini aç ya da yer adı yaz.'),{enableHighAccuracy:true,timeout:15000})};
+const WC={0:'Açık',1:'Çoğunlukla açık',2:'Parçalı bulutlu',3:'Kapalı',45:'Sisli',48:'Sisli',51:'Hafif çisenti',53:'Çisenti',55:'Yoğun çisenti',56:'Donan çisenti',57:'Donan çisenti',61:'Hafif yağmur',63:'Yağmur',65:'Şiddetli yağmur',66:'Donan yağmur',67:'Donan yağmur',71:'Hafif kar',73:'Kar',75:'Yoğun kar',77:'Kar taneleri',80:'Sağanak',81:'Sağanak',82:'Şiddetli sağanak',85:'Kar sağanağı',86:'Kar sağanağı',95:'Fırtına',96:'Dolu ihtimalli fırtına',99:'Dolu ihtimalli fırtına'};
+let wxBusy={},wxErr={};
+A.wx=async id=>{const j=job(id);if(!j||j.lat==null||wxBusy[id])return;wxBusy[id]=1;wxErr[id]=0;if(cur().p==='job'&&cur().id===id)render();
+  try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+j.lat+'&longitude='+j.lon+'&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=3');if(!r.ok)throw 0;const d=await r.json();if(!d.daily)throw 0;D.wx=D.wx||{};D.wx[id]={t:Date.now(),d:d.daily};save()}catch(e){wxErr[id]=1}
+  wxBusy[id]=0;if((cur().p==='job'&&cur().id===id)||cur().p==='cust')render()};
+const wxChip=j=>{const c=(D.wx||{})[j.id];if(!c||j.done||c.d.time[0]!==today())return'';return ' · '+Math.round(c.d.temperature_2m_max[0])+'° '+(WC[c.d.weather_code[0]]||'')};
+A.wxr=id=>{wxErr[id]=0;A.wx(id)};
+function wxCard(j){
+  if(j.lat==null)return `<div class="card"><b>Hava durumu</b><p class="mut" style="margin:4px 0 10px">Bu işe konum eklersen hava durumunu burada görürsün.</p><button class="btn sm y" onclick="A.newJob('${j.cust}','${j.id}')">Konum ekle</button></div>`;
+  const c=(D.wx||{})[j.id],d=c&&c.d,map=`https://www.google.com/maps/search/?api=1&query=${j.lat},${j.lon}`;
+  let h=`<div class="card wx"><div class="row"><h2 class="sp" style="margin:0">Hava durumu</h2><a class="btn sm" href="${map}" target="_blank" rel="noopener">Haritada aç</a></div>`;
+  if(d){const warns=[];
+    d.time.forEach((t,i)=>{const lb=i===0?'Bugün':i===1?'Yarın':new Date(t+'T12:00').toLocaleDateString('tr-TR',{weekday:'long'});
+      if(i<2){if((d.precipitation_probability_max[i]||0)>=50||(d.precipitation_sum[i]||0)>=3)warns.push(lb+': yağış bekleniyor, toprak işi zorlaşabilir.');if((d.wind_speed_10m_max[i]||0)>=40)warns.push(lb+': rüzgâr kuvvetli ('+Math.round(d.wind_speed_10m_max[i])+' km/s).');if(d.temperature_2m_min[i]<=0)warns.push(lb+': don var ('+Math.round(d.temperature_2m_min[i])+'°).')}
+      d._rows=(d._rows||'')+`<div class="d"><div><b>${lb}</b><div class="mut">${WC[d.weather_code[i]]||''}</div></div><div class="num">${Math.round(d.temperature_2m_min[i])}° / ${Math.round(d.temperature_2m_max[i])}°<div class="mut" style="font-weight:400">Yağış %${d.precipitation_probability_max[i]??0} · ${nf(d.precipitation_sum[i],1)} mm · Rüzgâr ${Math.round(d.wind_speed_10m_max[i])} km/s</div></div></div>`});
+    h+=warns.map(w=>`<div class="warn">${esc(w)}</div>`).join('')+d._rows;delete d._rows;
+    h+=`<p class="mut" style="margin:8px 0 0">Son güncelleme: ${new Date(c.t).toLocaleDateString('tr-TR')} ${hm(c.t)}${wxErr[j.id]?' · İnternet yok, son kayıt gösteriliyor':''}</p>`}
+  else h+=`<p class="mut">${wxBusy[j.id]||!wxErr[j.id]?'Yükleniyor…':'Hava durumu alınamadı (internet yok olabilir).'}</p>`;
+  return h+`<button class="btn sm" style="margin-top:8px" onclick="A.wxr('${j.id}')"${wxBusy[j.id]?' disabled':''}>${wxBusy[j.id]?'Güncelleniyor…':'Yenile'}</button></div>`;
+}
+
+/* ---------- Müşteriler ---------- */
+function vMusteri(){
+  const q=(cur().q||'').toLocaleLowerCase('tr');
+  const cs=D.customers.filter(c=>!q||(c.name+' '+(c.phone||'')).toLocaleLowerCase('tr').includes(q));
+  const mo=today().slice(0,7),me=D.entries.filter(e=>(e.date||'').startsWith(mo));
+  const mh=sum(me.filter(e=>e.t==='hak'),e=>e.amt),mg=sum(me.filter(e=>e.t==='gid'),e=>e.amt),al=sum(D.customers,c=>ct(c.id).alacak);
+  return `<div class="row"><h1 class="sp">Müşteriler</h1><button class="btn y" onclick="A.newCust()">+ Yeni müşteri</button></div>
+  ${D.customers.length?`<div class="card stats">${stat('Bu ay alınan',tl(mh),'pos')}${stat('Bu ay harcanan',tl(mg),'neg')}${stat('Bu ay kâr',tl(mh-mg),mh-mg<0?'neg':'pos')}${stat('Toplam alacak',tl(al),al?'neg':'')}</div>`:''}
+  ${D.customers.length>4?`<input id="q" placeholder="Müşteri ara" value="${esc(cur().q||'')}" style="margin-bottom:12px" aria-label="Müşteri ara">`:''}
+  <div class="card list">${cs.length?cs.map(c=>{const t=ct(c.id);return `<div class="it" onclick="A.go('cust','${c.id}')"><div class="sp"><b>${esc(c.name)}</b><div class="mut">${t.n} iş${c.phone?' · '+esc(c.phone):''}</div></div><div class="num"><div class="${t.kar<0?'neg':'pos'}">${tl(t.kar)}</div>${t.alacak?`<div class="mut">Alacak ${tl(t.alacak)}</div>`:''}</div></div>`}).join('')
+    :D.customers.length?'<div class="empty">Aramaya uyan müşteri yok.</div>':`<div class="empty">Henüz müşteri yok.<br>“+ Yeni müşteri” ile ilkini ekle.<br><br><button class="btn sm" onclick="A.demo()">Örnek veriyle dene</button></div>`}</div>`;
+}
+function vCust(id){
+  const c=cust(id),t=ct(id),wa=waNum(c.phone);
+  const js=D.jobs.filter(j=>j.cust===id).sort((a,b)=>(a.done-b.done)||(b.date||'').localeCompare(a.date||''));
+  return `<div class="row">${back}<span class="sp"></span><button class="btn sm" onclick="A.newCust('${id}')">Düzenle</button></div><h1>${esc(c.name)}</h1>
+  ${c.phone||c.addr?`<div class="row" style="margin-bottom:12px">${c.phone?`<a class="btn sm" href="tel:${esc(c.phone.replace(/\s/g,''))}">Ara: ${esc(c.phone)}</a>`:''}${wa?`<a class="btn sm g" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>`:''}${c.addr?`<span class="mut">${esc(c.addr)}</span>`:''}</div>`:''}
+  <div class="card stats">${stat('Alınan hakediş',tl(t.hak),'pos')}${stat('Harcanan',tl(t.gid),'neg')}${stat('Net kâr',tl(t.kar),t.kar<0?'neg':'pos')}${stat('Kalan alacak',tl(t.alacak),t.alacak?'neg':'')}</div>
+  <div class="row" style="margin:4px 0 10px"><h2 class="sp" style="margin:0">İşler</h2><button class="btn y" onclick="A.newJob('${id}')">+ Yeni iş</button></div>
+  <div class="card list">${js.length?js.map(j=>{const x=jt(j.id);return `<div class="it" onclick="A.go('job','${j.id}')"><div class="sp"><b>${esc(j.name)}</b> ${j.done?'<span class="tag">Bitti</span>':''}<div class="mut">${fd(j.date)}${j.place?' · '+esc(j.place):''}${wxChip(j)}${x.alacak?' · alacak '+tl(x.alacak):''}</div></div><div class="num ${x.kar<0?'neg':'pos'}">${tl(x.kar)}</div></div>`}).join(''):'<div class="empty">Bu müşteriye henüz iş eklenmedi.</div>'}</div>
+  ${c.note?`<div class="card"><b>Not</b><p style="margin:6px 0 0">${esc(c.note)}</p></div>`:''}
+  <button class="btn sm r" onclick="A.del(this,'cust','${id}')">Müşteriyi sil</button>`;
+}
+function vJob(id){
+  const j=job(id),c=cust(j.cust),x=jt(id);
+  const es=D.entries.filter(e=>e.job===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const lt=sum(es.filter(e=>e.cat==='Mazot'),e=>e.lt);
+  return `<div class="row">${back}<span class="sp"></span><button class="btn sm" onclick="A.newJob('${j.cust}','${id}')">Düzenle</button></div>
+  <p class="mut" style="margin:10px 0 0">${esc(c&&c.name)}${j.place?' · '+esc(j.place):''}</p><h1>${esc(j.name)} ${j.done?'<span class="tag">Bitti</span>':''}</h1>
+  <div class="card stats">${x.ag?stat('Anlaşılan ücret',tl(x.ag)):''}${stat('Alınan hakediş',tl(x.hak),'pos')}${stat('Harcanan',tl(x.gid),'neg')}${stat('Net kâr',tl(x.kar),x.kar<0?'neg':'pos')}${x.ag?stat('Kalan alacak',tl(x.alacak),x.alacak?'neg':''):''}${stat('Çalışma',nf(x.saat)+' saat')}${stat('Sefer',x.sefer+' sefer')}${lt?stat('Mazot',nf(lt,0)+' lt'):''}</div>
+  ${wxCard(j)}<div class="g2 two"><button class="btn r big" onclick="A.newEnt('${id}','gid')">+ Harcama</button><button class="btn g big" onclick="A.newEnt('${id}','hak')">+ Hakediş</button></div>
+  <div class="card list" style="margin-top:12px">${es.length?es.map(e=>`<div class="it" onclick="A.newEnt('${id}','${e.t}','${e.id}')"><div class="sp"><b>${e.t==='hak'?'Hakediş':esc(e.cat)}</b>${e.t==='hak'&&e.cat?` <span class="tag">${esc(e.cat)}</span>`:''}<div class="mut">${fd(e.date)}${e.lt?' · '+nf(e.lt,0)+' lt':''}${e.note?' · '+esc(e.note):''}</div></div><div class="num ${e.t==='hak'?'pos':'neg'}">${e.t==='hak'?'+':'−'}${tl(e.amt)}</div></div>`).join(''):'<div class="empty">Harcama veya hakediş ekleyince burada listelenir.<br>Düzeltmek için satıra dokun.</div>'}</div>
+  <div class="row"><button class="btn" onclick="A.done('${id}')">${j.done?'Devam ediyor yap':'İş bitti olarak işaretle'}</button><button class="btn sm r" onclick="A.del(this,'job','${id}')">İşi sil</button></div>
+  ${j.note?`<div class="card" style="margin-top:12px"><b>Not</b><p style="margin:6px 0 0">${esc(j.note)}</p></div>`:''}`;
+}
+
+/* ---------- Sayaç ---------- */
+function vSayac(){
+  const tm=D.timer,td=today(),act=D.jobs.filter(j=>!j.done);
+  const jopts=[['','— İş seçilmedi —'],...act.map(j=>[j.id,((cust(j.cust)||{}).name||'')+' · '+j.name])];
+  const ses=D.sessions.filter(s=>s.date===td),tj=D.tripJob||'';
+  const tr=D.trips.find(t=>t.job===tj&&t.date===td),n=tr?tr.n:0,kasa=+D.settings.kasa||0,all=sum(D.trips.filter(t=>t.date===td),t=>t.n);
+  const tjob=tm&&tm.job&&job(tm.job);
+  return `<h1>Sayaç</h1>
+  <div class="card"><h2>Çalışma saati</h2>${tm?`<p class="mut" style="text-align:center;margin:0">${esc((mac(tm.m)||{}).name)}${tjob?' · '+esc(tjob.name):''} · başlangıç ${hm(tm.start)}</p><div class="huge run" id="tm">${dur(Date.now()-tm.start)}</div><button class="btn r big" onclick="A.stop()">Bitir</button>`
+    :`<label for="tmM">Makine</label>${sel('tmM',D.machines.map(m=>[m.id,m.name]),D.lastM||'beko')}<label for="tmJ">İş</label>${sel('tmJ',jopts,D.lastJ||'')}<div class="huge" style="color:var(--mut)">00:00:00</div><button class="btn y big" onclick="A.start()">Başla</button>`}
+  ${ses.length?`<div class="list" style="margin-top:12px">${ses.map(s=>`<div class="it" style="cursor:default"><div class="sp"><b>${esc((mac(s.m)||{}).name)}</b><div class="mut">${hm(s.start)}–${hm(s.end)}${s.job&&job(s.job)?' · '+esc(job(s.job).name):''}</div></div><div class="num">${nf(s.h,2)} saat</div><button class="btn sm" onclick="A.del(this,'ses','${s.id}')">Sil</button></div>`).join('')}</div><p class="mut">Bugün toplam: <b>${nf(sum(ses,s=>s.h),2)} saat</b></p>`:''}</div>
+  <div class="card"><h2>Kamyon sefer sayacı</h2><label for="trJ">İş</label>${sel('trJ',jopts,tj)}<div class="huge">${n}</div><p class="mut" style="text-align:center;margin-top:0">bugün bu iş için sefer · yaklaşık ${nf(n*kasa)} m³ (kasa ${nf(kasa)} m³)</p>
+  <div class="g2 wide"><button class="btn big" onclick="A.trip(-1)" aria-label="Bir sefer azalt">−1</button><button class="btn y big" onclick="A.trip(1)">+1 Sefer</button></div><p class="mut">Bugün tüm işler: <b>${all} sefer</b></p></div>`;
+}
+A.start=()=>{const m=document.getElementById('tmM').value,j=document.getElementById('tmJ').value;D.lastM=m;D.lastJ=j;D.timer={m,job:j,start:Date.now()};save();render()};
+A.stop=()=>{const t=D.timer;if(!t)return;const end=Date.now(),h=(end-t.start)/3600000;D.sessions.push({id:uid(),m:t.m,job:t.job,start:t.start,end,h,date:today()});const M=mac(t.m);if(M&&M.unit==='saat')M.meter=+(M.meter+h).toFixed(2);D.timer=null;save();render()};
+A.trip=d=>{const td=today(),j=D.tripJob||'';let t=D.trips.find(x=>x.job===j&&x.date===td);if(!t){if(d<0)return;t={id:uid(),job:j,date:td,n:0};D.trips.push(t)}t.n=Math.max(0,t.n+d);try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}save();render()};
+
+/* ---------- Hesap ---------- */
+function vHesap(){
+  const c=D.calc;
+  return `<h1>Metreküp hesabı</h1><div class="card">
+  <label for="cMat">Malzeme</label>${sel('cMat',Object.entries(MATS).map(([k,v])=>[k,v[0]]),c.mat)}
+  <label for="cSt">Ölçtüğün malzeme hangi halde?</label>${sel('cSt',[['yer','Yerinde (kazılmamış, doğal hali)'],['kab','Kabarmış (kazılmış, kamyonda, yığında)'],['sik','Sıkıştırılmış (dolgu, silindirlenmiş)']],c.st)}
+  <label for="cMode">Nasıl gireceksin?</label>${sel('cMode',[['olcu','Ölçü ile (en × boy × derinlik)'],['m3','Metreküpü biliyorum']],c.mode)}
+  ${c.mode==='olcu'?`<div class="g2"><div><label for="cEn">En (m)</label><input id="cEn" inputmode="decimal" value="${esc(c.en)}"></div><div><label for="cBoy">Boy (m)</label><input id="cBoy" inputmode="decimal" value="${esc(c.boy)}"></div><div><label for="cDer">Derinlik (m)</label><input id="cDer" inputmode="decimal" value="${esc(c.der)}"></div></div>`
+    :`<label for="cM3">Hacim (m³)</label><input id="cM3" inputmode="decimal" value="${esc(c.m3)}">`}
+  <div class="g2 two"><div><label for="cKasa">Kamyon kasası (m³)</label><input id="cKasa" inputmode="decimal" value="${esc(c.kasa??nf(D.settings.kasa))}"></div><div><label for="cFiyat">Sefer başı ücret (₺)</label><input id="cFiyat" inputmode="decimal" value="${esc(c.fiyat)}"></div></div>
+  </div><div id="cRes"></div>`;
+}
+function calcRes(){
+  const el=document.getElementById('cRes');if(!el)return;
+  const c=D.calc,m=D.settings.mats[c.mat]||{sw:25,cp:90},sw=m.sw/100,cp=m.cp/100;
+  const V=c.mode==='olcu'?P(c.en)*P(c.boy)*P(c.der):P(c.m3);
+  const f=c.st==='yer'?1:c.st==='kab'?1+sw:cp;
+  const bank=f?V/f:0,loose=bank*(1+sw),comp=bank*cp,kasa=P(c.kasa??D.settings.kasa),sef=kasa>0?Math.ceil(loose/kasa-1e-9):0,fiy=P(c.fiyat);
+  el.innerHTML=V?`<div class="res"><div class="main"><span>Kamyona yüklenecek (kabarmış)</span><span class="v">${nf(loose)} m³</span>${kasa?`<b style="font-size:26px">${sef} sefer</b> <span>· kasa ${nf(kasa)} m³</span>`:''}</div>
+    ${stat('Yerinde (kazılmamış)',nf(bank)+' m³')}${stat('Sıkıştırılmış (dolgu)',nf(comp)+' m³')}${fiy&&sef?stat('Toplam nakliye ücreti',tl(sef*fiy),'pos'):''}${stat('Kullanılan oranlar',`Kabarma %${nf(m.sw)} · Sıkışma %${nf(m.cp)}`)}</div>
+    <p class="mut">Oranlar yaklaşıktır. Kendi tecrübene göre sağ üstteki Ayarlar'dan değiştirebilirsin.</p>`
+    :'<div class="card empty">Ölçüleri girince sonuç burada çıkar.</div>';
+}
+
+/* ---------- Bakım ---------- */
+function mSt(x,M){
+  if(x.kind==='date'){if(!x.due)return{lvl:1,txt:'Tarih girilmedi — dokunup ekle',pct:0};const d=Math.round((new Date(x.due)-new Date(today()))/864e5);return{lvl:d<0?2:d<=30?1:0,txt:(d<0?`${-d} gün geçti`:`${d} gün kaldı`)+' · '+fd(x.due),pct:Math.max(0,Math.min(1,d/365))}}
+  const left=(+x.last||0)+(+x.every||0)-M.meter;
+  return{lvl:left<=0?2:left<=x.every*.15?1:0,txt:left<=0?`Zamanı geçti: ${nf(-left)} ${M.unit} fazla`:`${nf(left)} ${M.unit} kaldı`,pct:Math.max(0,Math.min(1,left/x.every))};
+}
+const overdue=()=>D.maint.some(x=>{const M=mac(x.m);return M&&mSt(x,M).lvl===2});
+function vBakim(){
+  return `<h1>Bakım takibi</h1>`+D.machines.map(M=>{const it=D.maint.filter(x=>x.m===M.id);return `<div class="card"><h2>${esc(M.name)}</h2>
+  <label for="mt_${M.id}">Şu anki ${M.unit==='saat'?'çalışma saati':'kilometre'}</label><div class="row"><input id="mt_${M.id}" inputmode="decimal" value="${nf(M.meter,1)}" style="flex:1;width:auto"><button class="btn" onclick="A.meter('${M.id}')">Güncelle</button></div>
+  <div class="list" style="margin-top:8px">${it.map(x=>{const s=mSt(x,M),col=['var(--grn)','var(--org)','var(--red)'][s.lvl];return `<div class="it" onclick="A.newMt('${M.id}','${x.id}')"><div class="sp"><b>${esc(x.name)}</b><div class="mut" style="${s.lvl?'color:'+col+';font-weight:700':''}">${s.txt}${x.kind!=='date'?` · her ${nf(x.every)} ${M.unit}`:''}</div><div class="bar"><i style="width:${Math.round(s.pct*100)}%;background:${col}"></i></div></div><button class="btn sm y" onclick="event.stopPropagation();A.mdone(this,'${x.id}')">${x.kind==='date'?'Yenilendi':'Yapıldı'}</button></div>`}).join('')}</div>
+  <button class="btn sm" style="margin-top:8px" onclick="A.newMt('${M.id}')">+ Bakım kalemi ekle</button></div>`}).join('')
+  +`<p class="mut">Sayaç ekranında “Bitir”e basınca çalışılan saat bekoloderin saatine kendiliğinden eklenir. Aralıklar örnektir, makinenin kitapçığına göre düzenle (satıra dokun).</p>`;
+}
+A.meter=id=>{mac(id).meter=P(document.getElementById('mt_'+id).value);save();render()};
+A.mdone=(b,id)=>{if(!arm(b,'Onayla'))return;const x=D.maint.find(y=>y.id===id);if(x.kind==='date'){const d=x.due?new Date(x.due):new Date();d.setFullYear(d.getFullYear()+1);x.due=d.toISOString().slice(0,10)}else x.last=mac(x.m).meter;save();render()};
+A.newMt=(mid,id)=>{
+  const M=mac(mid),x=id?D.maint.find(y=>y.id===id):{kind:'meter',last:M.meter};
+  A.form(id?'Bakımı düzenle':'Bakım kalemi ekle',[{k:'name',l:'Bakım adı',req:1,v:x.name},{k:'kind',l:'Neye göre takip edilsin?',opts:[['meter',M.unit==='saat'?'Çalışma saatine göre':'Kilometreye göre'],['date','Tarihe göre (muayene, sigorta)']],v:x.kind},
+    {k:'every',l:`Kaç ${M.unit}te bir? (${M.unit}e göreyse)`,type:'number',v:x.every||''},{k:'last',l:`En son yapıldığı ${M.unit} (${M.unit}e göreyse)`,type:'number',v:x.last??''},{k:'due',l:'Son geçerlilik tarihi (tarihe göreyse)',type:'date',v:x.due||''}],
+    v=>{if(v.kind==='meter'&&!v.every)v.every=M.unit==='saat'?250:10000;v.last=+v.last||0;if(id)Object.assign(x,v);else D.maint.push({id:uid(),m:mid,...v})},id?['mt',id]:null);
+};
+
+/* ---------- Ayarlar ---------- */
+function vAyar(){
+  const ms=D.settings.mats;
+  return `<div class="row">${back}</div><h1>Ayarlar</h1>
+  <div class="card"><label for="sKasa" style="margin-top:0">Kamyon kasa hacmi (m³)</label><input id="sKasa" inputmode="decimal" value="${nf(D.settings.kasa)}">
+  <h2 style="margin-top:20px">Malzeme oranları</h2><p class="mut">Kabarma: kazılınca hacim yüzde kaç artar. Sıkışma: sıkıştırılınca yerinde haline göre yüzde kaç olur (100 = aynı).</p>
+  <table><thead><tr><th>Malzeme</th><th>Kabarma %</th><th>Sıkışma %</th></tr></thead><tbody>${Object.entries(MATS).map(([k,v])=>`<tr><td>${v[0]}</td><td><input id="sw_${k}" inputmode="decimal" value="${nf(ms[k].sw)}" aria-label="${v[0]} kabarma"></td><td><input id="cp_${k}" inputmode="decimal" value="${nf(ms[k].cp)}" aria-label="${v[0]} sıkışma"></td></tr>`).join('')}</tbody></table>
+  <button class="btn y full" style="margin-top:12px" onclick="A.saveSet(this)">Kaydet</button><button class="btn sm" style="margin-top:8px" onclick="A.resetMats()">Varsayılan oranlara dön</button></div>
+  <div class="card"><h2>Yedek</h2><p class="mut">Veriler bu telefonda saklanır. Arada bir yedeği kopyalayıp WhatsApp'tan kendine gönder.</p>
+  <button class="btn y full" onclick="A.copy(this)">Yedeği kopyala</button><label for="imp">Yedeği geri yükle (buraya yapıştır)</label><textarea id="imp"></textarea><button class="btn full" style="margin-top:8px" onclick="A.imp(this)">Geri yükle</button></div>
+  <div class="card"><h2>Tüm verileri sil</h2><button class="btn r" onclick="A.del(this,'all')">Her şeyi sil</button></div>`;
+}
+A.saveSet=b=>{D.settings.kasa=P(document.getElementById('sKasa').value)||16;for(const k in MATS){D.settings.mats[k]={sw:P(document.getElementById('sw_'+k).value),cp:P(document.getElementById('cp_'+k).value)||100}}delete D.calc.kasa;save();b.textContent='Kaydedildi ✓'};
+A.resetMats=()=>{D.settings.mats=defMats();save();render()};
+A.copy=b=>{const t=JSON.stringify(D);const fb=()=>{const ta=document.getElementById('imp');ta.value=t;ta.select();b.textContent='Aşağıdaki metni elle kopyala'};try{navigator.clipboard.writeText(t).then(()=>b.textContent='Kopyalandı ✓',fb)}catch(e){fb()}};
+A.imp=b=>{try{const d=JSON.parse(document.getElementById('imp').value);if(!d.customers||!d.machines)throw 0;D=d;save();b.textContent='Yüklendi ✓';setTimeout(()=>A.tab('musteri'),700)}catch(e){b.textContent='Geçersiz yedek'}};
+
+/* ---------- Çizim ---------- */
+const IC={
+ musteri:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2c2.1.7 3.5 2.7 3.5 5.8"/>',
+ sayac:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2.5h6"/>',
+ hesap:'<rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16.5h2M14 16.5h2"/>',
+ bakim:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'};
+const NAV=[['musteri','Müşteriler'],['sayac','Sayaç'],['hesap','Hesap'],['bakim','Bakım']];
+function render(){
+  const c=cur();
+  if((c.p==='cust'&&!cust(c.id))||(c.p==='job'&&!job(c.id))||(c.p==='form'&&!F)){ST.pop();return render()}
+  const V={musteri:vMusteri,cust:()=>vCust(c.id),job:()=>vJob(c.id),form:vForm,sayac:vSayac,hesap:vHesap,bakim:vBakim,ayar:vAyar};
+  document.getElementById('app').innerHTML=(V[c.p]||vMusteri)();
+  const t=ST[0].p,od=overdue();
+  document.getElementById('nav').innerHTML=NAV.map(([k,l])=>`<button class="${t===k?'on':''}" onclick="A.tab('${k}')"${t===k?' aria-current="page"':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>${l}${k==='bakim'&&od?'<span class="dot" aria-label="Geçmiş bakım var"></span>':''}</button>`).join('');
+  bind();
+}
+function bind(){
+  const ff=document.getElementById('ff');
+  if(ff)ff.onsubmit=e=>{e.preventDefault();const v={};let ok=true;
+    for(const f of F.fields){const el=document.getElementById('f_'+f.k),val=el.value.trim();if(f.req&&!val){el.style.borderColor='var(--red)';ok=false}v[f.k]=f.type==='number'?(val?P(val):''):val}
+    if(!ok)return;F.onSave(v);save();F=null;ST.pop();render();scrollTo(0,0)};
+  const q=document.getElementById('q');
+  if(q)q.oninput=()=>{cur().q=q.value;const p=q.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(p,p)};
+  const tr=document.getElementById('trJ');
+  if(tr)tr.onchange=()=>{D.tripJob=tr.value;save();render()};
+  const map={cMat:'mat',cSt:'st',cMode:'mode',cEn:'en',cBoy:'boy',cDer:'der',cM3:'m3',cKasa:'kasa',cFiyat:'fiyat'};
+  for(const id in map){const el=document.getElementById(id);if(!el)continue;el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{D.calc[map[id]]=el.value;save();if(id==='cMode')render();else calcRes()})}
+  calcRes();
+  const cc=cur();if(cc.p==='cust')D.jobs.filter(j=>j.cust===cc.id&&!j.done&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]&&!((D.wx||{})[j.id]&&Date.now()-D.wx[j.id].t<36e5)).slice(0,5).forEach(j=>setTimeout(()=>A.wx(j.id),0));if(cc.p==='job'){const j=job(cc.id);if(j&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]){const w=(D.wx||{})[j.id];if(!w||Date.now()-w.t>36e5)setTimeout(()=>A.wx(j.id),0)}}
+}
+setInterval(()=>{const e=document.getElementById('tm');if(e&&D.timer)e.textContent=dur(Date.now()-D.timer.start)},1000);
+render();
+if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
+}
+</script>
+</body>
+</html>
