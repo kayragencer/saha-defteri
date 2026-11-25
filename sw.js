@@ -7,6 +7,10 @@ self.addEventListener('fetch',e=>{
   if(r.method!=='GET')return;
   const font=/(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(u.hostname);
   if(u.origin!==location.origin&&!font)return;
+  if(r.mode==='navigate'){
+    e.respondWith(fetch(r).then(res=>{const cp=res.clone();caches.open(V).then(c=>c.put('index.html',cp));return res}).catch(()=>caches.match('index.html')));
+    return;
+  }
   e.respondWith(caches.match(r,{ignoreSearch:true}).then(hit=>{
     const net=fetch(r).then(res=>{if(res&&(res.ok||res.type==='opaque')){const cp=res.clone();caches.open(V).then(c=>c.put(r,cp))}return res}).catch(()=>hit);
     return hit||net;

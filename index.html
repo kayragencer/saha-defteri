@@ -51,8 +51,8 @@ textarea{min-height:90px}
 .st{background:var(--bg);border-radius:10px;padding:10px 12px}.st span{display:block;font-size:13px;color:var(--mut)}.st b{font-size:20px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pos{color:var(--grn)}.neg{color:var(--red)}
 .huge{font-size:clamp(46px,15vw,76px);font-weight:800;font-stretch:112%;line-height:1;font-variant-numeric:tabular-nums;text-align:center;margin:14px 0}
-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-bottom:env(safe-area-inset-bottom);z-index:5}
-nav button{background:none;border:0;font:inherit;font-size:13px;font-weight:700;color:var(--mut);padding:8px 0 10px;min-height:66px;cursor:pointer;position:relative}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{background:none;border:0;font:inherit;font-size:12px;font-weight:700;color:var(--mut);padding:8px 0 10px;min-height:66px;cursor:pointer;position:relative}
 nav button svg{display:block;margin:0 auto 3px;width:27px;height:27px}
 nav button.on{color:var(--ink)}nav button.on svg{color:var(--y)}
 .dot{position:absolute;top:8px;left:calc(50% + 8px);width:11px;height:11px;border-radius:50%;background:var(--red)}
@@ -115,7 +115,7 @@ function jt(jid){
 function ct(cid){const js=D.jobs.filter(j=>j.cust===cid).map(j=>jt(j.id));return{hak:sum(js,x=>x.hak),gid:sum(js,x=>x.gid),kar:sum(js,x=>x.kar),alacak:sum(js,x=>x.alacak),n:js.length}}
 const waNum=p=>{let d=String(p||'').replace(/\D/g,'');if(!d)return'';if(d.startsWith('0'))d=d.slice(1);if(d.length===10)d='90'+d;return d};
 
-let ST=[{p:'musteri'}],F=null;
+let ST=[{p:'ana'}],F=null;
 const cur=()=>ST[ST.length-1];
 const A={};window.A=A;
 A.go=(p,id)=>{ST.push({p,id});render();scrollTo(0,0)};
@@ -153,7 +153,7 @@ A.del=(b,kind,id)=>{
   if(kind==='ent')D.entries=D.entries.filter(e=>e.id!==id);
   if(kind==='ses'){const s=D.sessions.find(x=>x.id===id),M=s&&mac(s.m);if(M&&M.unit==='saat')M.meter=Math.max(0,+(M.meter-s.h).toFixed(2));D.sessions=D.sessions.filter(x=>x.id!==id)}
   if(kind==='mt')D.maint=D.maint.filter(x=>x.id!==id);
-  if(kind==='all'){D=def();save();ST=[{p:'musteri'}];render();return}
+  if(kind==='all'){D=def();save();ST=[{p:'ana'}];render();return}
   save();if(cur().p==='form'){F=null;ST.pop()}render();
 };
 A.done=id=>{const j=job(id);j.done=!j.done;save();render()};
@@ -171,7 +171,7 @@ const WC={0:'Açık',1:'Çoğunlukla açık',2:'Parçalı bulutlu',3:'Kapalı',4
 let wxBusy={},wxErr={};
 A.wx=async id=>{const j=job(id);if(!j||j.lat==null||wxBusy[id])return;wxBusy[id]=1;wxErr[id]=0;if(cur().p==='job'&&cur().id===id)render();
   try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+j.lat+'&longitude='+j.lon+'&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=3');if(!r.ok)throw 0;const d=await r.json();if(!d.daily)throw 0;D.wx=D.wx||{};D.wx[id]={t:Date.now(),d:d.daily};save()}catch(e){wxErr[id]=1}
-  wxBusy[id]=0;if((cur().p==='job'&&cur().id===id)||cur().p==='cust')render()};
+  wxBusy[id]=0;if((cur().p==='job'&&cur().id===id)||cur().p==='cust'||cur().p==='ana')render()};
 const wxChip=j=>{const c=(D.wx||{})[j.id];if(!c||j.done||c.d.time[0]!==today())return'';return ' · '+Math.round(c.d.temperature_2m_max[0])+'° '+(WC[c.d.weather_code[0]]||'')};
 A.wxr=id=>{wxErr[id]=0;A.wx(id)};
 function wxCard(j){
@@ -186,6 +186,30 @@ function wxCard(j){
     h+=`<p class="mut" style="margin:8px 0 0">Son güncelleme: ${new Date(c.t).toLocaleDateString('tr-TR')} ${hm(c.t)}${wxErr[j.id]?' · İnternet yok, son kayıt gösteriliyor':''}</p>`}
   else h+=`<p class="mut">${wxBusy[j.id]||!wxErr[j.id]?'Yükleniyor…':'Hava durumu alınamadı (internet yok olabilir).'}</p>`;
   return h+`<button class="btn sm" style="margin-top:8px" onclick="A.wxr('${j.id}')"${wxBusy[j.id]?' disabled':''}>${wxBusy[j.id]?'Güncelleniyor…':'Yenile'}</button></div>`;
+}
+
+/* ---------- Ana sayfa ---------- */
+function vAna(){
+  const td=today(),tm=D.timer,mo=td.slice(0,7),me=D.entries.filter(e=>(e.date||'').startsWith(mo));
+  const mh=sum(me.filter(e=>e.t==='hak'),e=>e.amt),mg=sum(me.filter(e=>e.t==='gid'),e=>e.amt),al=sum(D.customers,c=>ct(c.id).alacak);
+  const act=D.jobs.filter(j=>!j.done).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const sef=sum(D.trips.filter(t=>t.date===td),t=>t.n),saat=sum(D.sessions.filter(s=>s.date===td),s=>s.h);
+  const due=D.maint.map(x=>({x,M:mac(x.m)})).filter(o=>o.M&&!(o.x.kind==='date'&&!o.x.due)).map(o=>({...o,s:mSt(o.x,o.M)})).filter(o=>o.s.lvl>0).sort((a,b)=>b.s.lvl-a.s.lvl).slice(0,3);
+  const dt=new Date().toLocaleDateString('tr-TR',{weekday:'long',day:'numeric',month:'long'});
+  return `<p class="mut" style="margin:6px 0 0">${esc(dt)}</p><h1>Bugün</h1>
+  ${tm?`<div class="card"><p class="mut" style="text-align:center;margin:0">${esc((mac(tm.m)||{}).name)}${tm.job&&job(tm.job)?' · '+esc(job(tm.job).name):''} çalışıyor</p><div class="huge run" id="tm">${dur(Date.now()-tm.start)}</div><button class="btn r big" onclick="A.stop()">Çalışmayı bitir</button></div>`
+  :`<button class="btn y big" style="margin-bottom:12px" onclick="A.tab('sayac')">Çalışmaya başla</button>`}
+  <div class="g2 two" style="margin-bottom:12px"><button class="btn r big" onclick="A.quick('gid')">+ Harcama</button><button class="btn g big" onclick="A.quick('hak')">+ Hakediş</button></div>
+  <div class="card stats">${stat('Bugün çalışma',nf(saat,1)+' saat')}${stat('Bugün sefer',sef+' sefer')}${stat('Bu ay alınan',tl(mh),'pos')}${stat('Bu ay harcanan',tl(mg),'neg')}${stat('Bu ay kâr',tl(mh-mg),mh-mg<0?'neg':'pos')}${stat('Toplam alacak',tl(al),al?'neg':'')}</div>
+  ${!D.customers.length?`<div class="card"><h2>Başlamak için</h2><ol style="margin:0 0 12px;padding-left:22px;line-height:1.8"><li>Müşteri ekle</li><li>Müşteriye iş ekle (yer seçersen hava durumu görünür)</li><li>Harcama ve hakedişi gir, kâr kendiliğinden hesaplanır</li></ol><button class="btn y full" onclick="A.newCust()">+ İlk müşteriyi ekle</button><button class="btn sm full" style="margin-top:8px" onclick="A.demo()">Örnek veriyle dene</button></div>`
+  :`<div class="row" style="margin:4px 0 10px"><h2 class="sp" style="margin:0">Devam eden işler</h2><button class="btn sm" onclick="A.tab('musteri')">Tüm müşteriler</button></div><div class="card list">${act.length?act.slice(0,5).map(j=>{const x=jt(j.id),c=cust(j.cust);return `<div class="it" onclick="A.go('job','${j.id}')"><div class="sp"><b>${esc(j.name)}</b><div class="mut">${esc(c&&c.name)}${j.place?' · '+esc(j.place):''}${wxChip(j)}</div></div><div class="num ${x.kar<0?'neg':'pos'}">${tl(x.kar)}</div></div>`}).join(''):'<div class="empty">Devam eden iş yok.<br>Müşteri sayfasından yeni iş ekle.</div>'}</div>`}
+  ${due.length?`<div class="card"><div class="row"><h2 class="sp" style="margin:0 0 6px">Bakım uyarısı</h2><button class="btn sm" onclick="A.tab('bakim')">Aç</button></div>${due.map(o=>`<div style="color:${o.s.lvl===2?'var(--red)':'var(--org)'};font-weight:700;margin-top:4px">${esc(o.M.name)} · ${esc(o.x.name)}: ${o.s.txt}</div>`).join('')}</div>`:''}`;
+}
+A.quick=t=>{const act=D.jobs.filter(j=>!j.done);if(act.length===1)A.newEnt(act[0].id,t);else A.go('pick',t)};
+A.chosen=(jid,t)=>{ST.pop();A.newEnt(jid,t)};
+function vPick(){
+  const t=cur().id,act=D.jobs.filter(j=>!j.done);
+  return `<div class="row">${back}</div><h1>${t==='gid'?'Harcama':'Hakediş'}: hangi iş?</h1><div class="card list">${act.length?act.map(j=>{const c=cust(j.cust);return `<div class="it" onclick="A.chosen('${j.id}','${t}')"><div class="sp"><b>${esc(j.name)}</b><div class="mut">${esc(c&&c.name)}</div></div></div>`}).join(''):'<div class="empty">Önce bir iş eklemen lazım.<br><br><button class="btn sm y" onclick="A.tab(\'musteri\')">Müşterilere git</button></div>'}</div>`;
 }
 
 /* ---------- Müşteriler ---------- */
@@ -304,19 +328,20 @@ function vAyar(){
 A.saveSet=b=>{D.settings.kasa=P(document.getElementById('sKasa').value)||16;for(const k in MATS){D.settings.mats[k]={sw:P(document.getElementById('sw_'+k).value),cp:P(document.getElementById('cp_'+k).value)||100}}delete D.calc.kasa;save();b.textContent='Kaydedildi ✓'};
 A.resetMats=()=>{D.settings.mats=defMats();save();render()};
 A.copy=b=>{const t=JSON.stringify(D);const fb=()=>{const ta=document.getElementById('imp');ta.value=t;ta.select();b.textContent='Aşağıdaki metni elle kopyala'};try{navigator.clipboard.writeText(t).then(()=>b.textContent='Kopyalandı ✓',fb)}catch(e){fb()}};
-A.imp=b=>{try{const d=JSON.parse(document.getElementById('imp').value);if(!d.customers||!d.machines)throw 0;D=d;save();b.textContent='Yüklendi ✓';setTimeout(()=>A.tab('musteri'),700)}catch(e){b.textContent='Geçersiz yedek'}};
+A.imp=b=>{try{const d=JSON.parse(document.getElementById('imp').value);if(!d.customers||!d.machines)throw 0;D=d;save();b.textContent='Yüklendi ✓';setTimeout(()=>A.tab('ana'),700)}catch(e){b.textContent='Geçersiz yedek'}};
 
 /* ---------- Çizim ---------- */
 const IC={
+ ana:'<path d="M3 11l9-8 9 8M5 9.5V20h5v-6h4v6h5V9.5"/>',
  musteri:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2c2.1.7 3.5 2.7 3.5 5.8"/>',
  sayac:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2.5h6"/>',
  hesap:'<rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="M8 7h8M8 12h2M14 12h2M8 16.5h2M14 16.5h2"/>',
  bakim:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'};
-const NAV=[['musteri','Müşteriler'],['sayac','Sayaç'],['hesap','Hesap'],['bakim','Bakım']];
+const NAV=[['ana','Ana'],['musteri','Müşteri'],['sayac','Sayaç'],['hesap','Hesap'],['bakim','Bakım']];
 function render(){
   const c=cur();
   if((c.p==='cust'&&!cust(c.id))||(c.p==='job'&&!job(c.id))||(c.p==='form'&&!F)){ST.pop();return render()}
-  const V={musteri:vMusteri,cust:()=>vCust(c.id),job:()=>vJob(c.id),form:vForm,sayac:vSayac,hesap:vHesap,bakim:vBakim,ayar:vAyar};
+  const V={ana:vAna,pick:vPick,musteri:vMusteri,cust:()=>vCust(c.id),job:()=>vJob(c.id),form:vForm,sayac:vSayac,hesap:vHesap,bakim:vBakim,ayar:vAyar};
   document.getElementById('app').innerHTML=(V[c.p]||vMusteri)();
   const t=ST[0].p,od=overdue();
   document.getElementById('nav').innerHTML=NAV.map(([k,l])=>`<button class="${t===k?'on':''}" onclick="A.tab('${k}')"${t===k?' aria-current="page"':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>${l}${k==='bakim'&&od?'<span class="dot" aria-label="Geçmiş bakım var"></span>':''}</button>`).join('');
@@ -334,7 +359,7 @@ function bind(){
   const map={cMat:'mat',cSt:'st',cMode:'mode',cEn:'en',cBoy:'boy',cDer:'der',cM3:'m3',cKasa:'kasa',cFiyat:'fiyat'};
   for(const id in map){const el=document.getElementById(id);if(!el)continue;el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{D.calc[map[id]]=el.value;save();if(id==='cMode')render();else calcRes()})}
   calcRes();
-  const cc=cur();if(cc.p==='cust')D.jobs.filter(j=>j.cust===cc.id&&!j.done&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]&&!((D.wx||{})[j.id]&&Date.now()-D.wx[j.id].t<36e5)).slice(0,5).forEach(j=>setTimeout(()=>A.wx(j.id),0));if(cc.p==='job'){const j=job(cc.id);if(j&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]){const w=(D.wx||{})[j.id];if(!w||Date.now()-w.t>36e5)setTimeout(()=>A.wx(j.id),0)}}
+  const cc=cur();if(cc.p==='cust'||cc.p==='ana')D.jobs.filter(j=>(cc.p==='ana'||j.cust===cc.id)&&!j.done&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]&&!((D.wx||{})[j.id]&&Date.now()-D.wx[j.id].t<36e5)).slice(0,5).forEach(j=>setTimeout(()=>A.wx(j.id),0));if(cc.p==='job'){const j=job(cc.id);if(j&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]){const w=(D.wx||{})[j.id];if(!w||Date.now()-w.t>36e5)setTimeout(()=>A.wx(j.id),0)}}
 }
 setInterval(()=>{const e=document.getElementById('tm');if(e&&D.timer)e.textContent=dur(Date.now()-D.timer.start)},1000);
 render();
