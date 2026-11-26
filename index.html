@@ -216,6 +216,32 @@ function vPick(){
   return `<div class="row">${back}</div><h1>${t==='gid'?'Harcama':t==='hak'?'Hakediş':'Gün sonu fişi'}: hangi iş?</h1><div class="card list">${act.length?act.map(j=>{const c=cust(j.cust);return `<div class="it" onclick="A.chosen('${j.id}','${t}')"><div class="sp"><b>${esc(j.name)}</b><div class="mut">${esc(c&&c.name)}</div></div></div>`}).join(''):'<div class="empty">Önce bir iş eklemen lazım.<br><br><button class="btn sm y" onclick="A.tab(\'musteri\')">Müşterilere git</button></div>'}</div>`;
 }
 
+/* ---------- İmza ---------- */
+let padDirty=false;
+function initPad(){
+  const cv=document.getElementById('pad');if(!cv)return;
+  const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.lineWidth=3;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#171614';padDirty=false;
+  let dr=false,lx=0,ly=0;const pt=e=>{const b=cv.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
+  cv.onpointerdown=e=>{e.preventDefault();dr=true;[lx,ly]=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}x.beginPath();x.moveTo(lx,ly);x.lineTo(lx+.1,ly+.1);x.stroke();padDirty=true};
+  cv.onpointermove=e=>{if(!dr)return;e.preventDefault();const[a,b]=pt(e);x.beginPath();x.moveTo(lx,ly);x.lineTo(a,b);x.stroke();lx=a;ly=b};
+  cv.onpointerup=cv.onpointercancel=()=>{dr=false};
+}
+A.sign=(id,w)=>A.go('sign',id+'|'+w);
+function vSign(){
+  const[id,w]=String(cur().id).split('|');
+  return `<div class="row">${back}</div><h1>${w==='1'?'Operatör imzası':'Teslim alan imzası'}</h1><p class="mut">Parmağınla aşağıdaki kutuya imza at.${w==='1'?' Bu imza kaydedilir, sonraki fişlerde kendiliğinden gelir.':''}</p>
+  <canvas id="pad" style="width:100%;height:240px;background:#fff;border:2px solid var(--line);border-radius:12px;touch-action:none;display:block"></canvas>
+  <div class="g2 two" style="margin-top:12px"><button class="btn big" onclick="A.padClear()">Temizle</button><button class="btn y big" onclick="A.padSave('${id}','${w}')">Kaydet</button></div>`;
+}
+A.padClear=()=>initPad();
+A.padSave=(id,w)=>{
+  const cv=document.getElementById('pad'),s=slipOf(id);if(!cv||!s||!padDirty)return;
+  const sc=document.createElement('canvas');sc.width=400;sc.height=Math.round(cv.height*400/cv.width);sc.getContext('2d').drawImage(cv,0,0,sc.width,sc.height);
+  const u=sc.toDataURL('image/png');if(w==='1'){s.sg1=u;D.settings.sig1=u}else s.sg2=u;
+  save();A.back();
+};
+
 /* ---------- Gün sonu fişi ---------- */
 const slipOf=id=>D.slips.find(x=>x.id===id);
 const UN={Saat:'saat',Sefer:'sefer','Gün':'gün',Sabit:''};
@@ -239,7 +265,7 @@ A.newSlip=(jid,id)=>{
     v.saat=+v.saat||0;v.sefer=+v.sefer||0;v.rate=+v.rate||0;v.lt=+v.lt||0;
     v.amt=v.unit==='Saat'?v.saat*v.rate:v.unit==='Sefer'?v.sefer*v.rate:v.rate;
     const M=mac(v.m);if(M)M.plate=v.plate;D.settings.op=v.op;D.settings.biz=v.biz;j.rate=v.rate;j.unit=v.unit;
-    if(id)Object.assign(S,v);else{const y=(v.date||td).slice(0,4),n=D.slips.filter(x=>(x.date||'').startsWith(y)).length+1,sid=uid();D.slips.push({id:sid,job:jid,no:y+'-'+String(n).padStart(3,'0'),...v});setTimeout(()=>A.go('slip',sid),0)}
+    if(id)Object.assign(S,v);else{const y=(v.date||td).slice(0,4),n=D.slips.filter(x=>(x.date||'').startsWith(y)).length+1,sid=uid();D.slips.push({id:sid,job:jid,no:y+'-'+String(n).padStart(3,'0'),...v,sg1:D.settings.sig1||''});setTimeout(()=>A.go('slip',sid),0)}
   });
 };
 function slipRows(s){
@@ -259,25 +285,27 @@ function slipBlock(jid){
 }
 function vSlip(){
   const s=slipOf(cur().id),rows=slipRows(s),line='display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #ddd';
+  const sg=w=>{const u=s['sg'+w];return `<div style="text-align:center"><div style="height:72px;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="A.sign('${s.id}','${w}')">${u?`<img src="${u}" alt="imza" style="max-height:68px;max-width:100%">`:`<span class="btn sm y">İmzala</span>`}</div><div style="border-top:1px solid #171614;padding-top:4px;font-size:12px">${w==='1'?'Teslim eden (operatör)':'Teslim alan (firma yetkilisi)'}</div></div>`};
   return `<div class="row">${back}<span class="sp"></span><button class="btn sm" onclick="A.newSlip('${s.job}','${s.id}')">Düzenle</button></div>
   <div class="card" style="background:#fff;color:#171614;border:2px solid #171614;margin-top:12px"><div style="text-align:center;border-bottom:2px dashed #999;padding-bottom:10px;margin-bottom:6px"><b style="font-size:20px">${esc(s.biz||'Saha Defteri')}</b><div style="font-weight:800;letter-spacing:.06em">GÜNLÜK ÇALIŞMA FİŞİ</div></div>
   ${rows.map(([a,b])=>`<div style="${line}"><span style="color:#68645d;font-size:14px">${esc(a)}</span><b style="text-align:right">${esc(b)}</b></div>`).join('')}
   <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 4px"><b>TUTAR</b><b style="font-size:28px">${tl(s.amt)}</b></div>
-  <div class="g2 two" style="margin-top:22px"><div style="border-top:1px solid #171614;padding-top:4px;font-size:12px;text-align:center">Teslim eden (operatör)</div><div style="border-top:1px solid #171614;padding-top:4px;font-size:12px;text-align:center">Teslim alan (firma yetkilisi)</div></div></div>
+  <div class="g2 two" style="margin-top:22px;gap:16px">${sg('1')}${sg('2')}</div></div>
   <button class="btn g big" style="margin-bottom:8px" onclick="A.slipWa('${s.id}')">WhatsApp ile gönder</button>
   <button class="btn y full" onclick="A.slipImg('${s.id}',this)">Resim olarak kaydet / paylaş</button>
   <button class="btn sm r" style="margin-top:12px" onclick="A.del(this,'slip','${s.id}')">Fişi sil</button>`;
 }
 A.slipWa=id=>{const s=slipOf(id),c=cust((job(s.job)||{}).cust)||{};window.open('https://wa.me/'+waNum(c.phone)+'?text='+encodeURIComponent(slipText(s)),'_blank')};
-A.slipImg=(id,b)=>{
-  const s=slipOf(id),rows=slipRows(s),W=900,pad=40,rh=62,H=200+rows.length*rh+230,FN='Archivo,system-ui,sans-serif';
+A.slipImg=async(id,b)=>{
+  const s0=slipOf(id),li=u=>new Promise(r=>{if(!u)return r(null);const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=u}),[g1,g2]=await Promise.all([li(s0.sg1),li(s0.sg2)]);
+  const s=s0,rows=slipRows(s),W=900,pad=40,rh=62,H=200+rows.length*rh+230,FN='Archivo,system-ui,sans-serif';
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
   x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#f5b301';x.fillRect(0,0,W,150);
   x.fillStyle='#171614';x.textAlign='center';x.font='800 40px '+FN;x.fillText((s.biz||'Saha Defteri').slice(0,34),W/2,70);x.font='700 28px '+FN;x.fillText('GÜNLÜK ÇALIŞMA FİŞİ',W/2,118);
   let y=200;
   rows.forEach(([a,v])=>{x.textAlign='left';x.fillStyle='#68645d';x.font='400 26px '+FN;x.fillText(a,pad,y);x.textAlign='right';x.fillStyle='#171614';x.font='700 28px '+FN;x.fillText(String(v).slice(0,36),W-pad,y);x.fillStyle='#ddd';x.fillRect(pad,y+18,W-2*pad,2);y+=rh});
   x.fillStyle='#171614';x.textAlign='left';x.font='800 34px '+FN;x.fillText('TUTAR',pad,y+30);x.textAlign='right';x.font='800 48px '+FN;x.fillText(tl(s.amt),W-pad,y+34);
-  y+=130;x.fillRect(pad,y,360,2);x.fillRect(W-pad-360,y,360,2);x.textAlign='center';x.font='400 22px '+FN;x.fillText('Teslim eden (operatör)',pad+180,y+34);x.fillText('Teslim alan (firma yetkilisi)',W-pad-180,y+34);
+  y+=130;const dg=(g,cx)=>{if(!g)return;let h=76,w=g.width*h/g.height;if(w>340){w=340;h=g.height*w/g.width}x.drawImage(g,cx-w/2,y-h-6,w,h)};dg(g1,pad+180);dg(g2,W-pad-180);x.fillRect(pad,y,360,2);x.fillRect(W-pad-360,y,360,2);x.textAlign='center';x.font='400 22px '+FN;x.fillText('Teslim eden (operatör)',pad+180,y+34);x.fillText('Teslim alan (firma yetkilisi)',W-pad-180,y+34);
   x.strokeStyle='#171614';x.lineWidth=4;x.strokeRect(2,2,W-4,H-4);
   cv.toBlob(async bl=>{const f=new File([bl],'fis-'+s.no+'.png',{type:'image/png'});
     try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Çalışma fişi '+s.no});return}}catch(e){if(e&&e.name==='AbortError')return}
@@ -412,8 +440,8 @@ const IC={
 const NAV=[['ana','Ana'],['musteri','Müşteri'],['sayac','Sayaç'],['hesap','Hesap'],['bakim','Bakım']];
 function render(){
   const c=cur();
-  if((c.p==='cust'&&!cust(c.id))||(c.p==='job'&&!job(c.id))||(c.p==='form'&&!F)||(c.p==='slip'&&!slipOf(c.id))){ST.pop();return render()}
-  const V={ana:vAna,pick:vPick,slip:vSlip,musteri:vMusteri,cust:()=>vCust(c.id),job:()=>vJob(c.id),form:vForm,sayac:vSayac,hesap:vHesap,bakim:vBakim,ayar:vAyar};
+  if((c.p==='cust'&&!cust(c.id))||(c.p==='job'&&!job(c.id))||(c.p==='form'&&!F)||(c.p==='slip'&&!slipOf(c.id))||(c.p==='sign'&&!slipOf(String(c.id).split('|')[0]))){ST.pop();return render()}
+  const V={ana:vAna,pick:vPick,slip:vSlip,sign:vSign,musteri:vMusteri,cust:()=>vCust(c.id),job:()=>vJob(c.id),form:vForm,sayac:vSayac,hesap:vHesap,bakim:vBakim,ayar:vAyar};
   document.getElementById('app').innerHTML=(V[c.p]||vMusteri)();
   const t=ST[0].p,od=overdue();
   document.getElementById('nav').innerHTML=NAV.map(([k,l])=>`<button class="${t===k?'on':''}" onclick="A.tab('${k}')"${t===k?' aria-current="page"':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>${l}${k==='bakim'&&od?'<span class="dot" aria-label="Geçmiş bakım var"></span>':''}</button>`).join('');
@@ -431,6 +459,7 @@ function bind(){
   const map={cMat:'mat',cSt:'st',cMode:'mode',cEn:'en',cBoy:'boy',cDer:'der',cM3:'m3',cKasa:'kasa',cFiyat:'fiyat'};
   for(const id in map){const el=document.getElementById(id);if(!el)continue;el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{D.calc[map[id]]=el.value;save();if(id==='cMode')render();else calcRes()})}
   calcRes();
+  if(cur().p==='sign')initPad();
   const cc=cur();if(cc.p==='cust'||cc.p==='ana')D.jobs.filter(j=>(cc.p==='ana'||j.cust===cc.id)&&!j.done&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]&&!((D.wx||{})[j.id]&&Date.now()-D.wx[j.id].t<36e5)).slice(0,5).forEach(j=>setTimeout(()=>A.wx(j.id),0));if(cc.p==='job'){const j=job(cc.id);if(j&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]){const w=(D.wx||{})[j.id];if(!w||Date.now()-w.t>36e5)setTimeout(()=>A.wx(j.id),0)}}
 }
 setInterval(()=>{const e=document.getElementById('tm');if(e&&D.timer)e.textContent=dur(Date.now()-D.timer.start)},1000);
