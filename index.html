@@ -110,8 +110,8 @@ const job=id=>D.jobs.find(j=>j.id===id);
 const sum=(a,f)=>a.reduce((s,x)=>s+(+f(x)||0),0);
 function jt(jid){
   const e=D.entries.filter(x=>x.job===jid),j=job(jid);
-  const hak=sum(e.filter(x=>x.t==='hak'),x=>x.amt),gid=sum(e.filter(x=>x.t==='gid'),x=>x.amt),ag=+(j&&j.agreed)||0;
-  return{hak,gid,kar:hak-gid,ag,alacak:ag?Math.max(0,ag-hak):0,saat:sum(D.sessions.filter(s=>s.job===jid),s=>s.h),sefer:sum(D.trips.filter(t=>t.job===jid),t=>t.n)};
+  const hak=sum(e.filter(x=>x.t==='hak'),x=>x.amt),gid=sum(e.filter(x=>x.t==='gid'),x=>x.amt),ag=+(j&&j.agreed)||0,fis=sum(D.slips.filter(x=>x.job===jid),x=>x.amt);
+  return{hak,gid,kar:hak-gid,ag,fis,alacak:Math.max(0,(ag||fis)-hak),saat:sum(D.sessions.filter(s=>s.job===jid),s=>s.h),sefer:sum(D.trips.filter(t=>t.job===jid),t=>t.n)};
 }
 function ct(cid){const js=D.jobs.filter(j=>j.cust===cid).map(j=>jt(j.id));return{hak:sum(js,x=>x.hak),gid:sum(js,x=>x.gid),kar:sum(js,x=>x.kar),alacak:sum(js,x=>x.alacak),n:js.length}}
 const waNum=p=>{let d=String(p||'').replace(/\D/g,'');if(!d)return'';if(d.startsWith('0'))d=d.slice(1);if(d.length===10)d='90'+d;return d};
@@ -128,12 +128,12 @@ const sel=(id,opts,val)=>`<select id="${id}">${opts.map(([v,t])=>`<option value=
 const arm=(b,txt)=>{if(b.dataset.arm)return true;b.dataset.arm=1;const o=b.textContent;b.textContent=txt||'Emin misin? Tekrar bas';setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent=o}},3000);return false};
 
 /* ---------- Formlar ---------- */
-A.form=(title,fields,onSave,del)=>{F={title,fields,onSave,del};A.go('form')};
+A.form=(title,fields,onSave,del,extra)=>{F={title,fields,onSave,del,extra};A.go('form')};
 function vForm(){
   return `<div class="row">${back}</div><h1>${esc(F.title)}</h1><form id="ff" class="card" novalidate>${F.fields.map(f=>f.type==='hid'?`<input type="hidden" id="f_${f.k}" value="${esc(f.v??'')}">`:`<label for="f_${f.k}">${esc(f.l)}${f.req?' *':''}</label>`+
     (f.opts?sel('f_'+f.k,f.opts,f.v):f.type==='loc'?locField(f):f.type==='area'?`<textarea id="f_${f.k}">${esc(f.v)}</textarea>`:
     `<input id="f_${f.k}" type="${f.type==='number'?'text':(f.type||'text')}"${f.type==='number'?' inputmode="decimal"':''} value="${esc(f.v??'')}">`)).join('')}
-    <button class="btn y full" type="submit" style="margin-top:18px">Kaydet</button></form>
+    ${F.extra?F.extra():''}<button class="btn y full" type="submit" style="margin-top:18px">Kaydet</button></form>
     ${F.del?`<button class="btn sm r" onclick="A.del(this,'${F.del[0]}','${F.del[1]}')">Sil</button>`:''}`;
 }
 A.newCust=id=>{const c=id?cust(id):{};A.form(id?'Müşteriyi düzenle':'Yeni müşteri',[{k:'name',l:'Ad / firma',req:1,v:c.name},{k:'phone',l:'Telefon',type:'tel',v:c.phone},{k:'addr',l:'Adres / yer',v:c.addr},{k:'note',l:'Not',type:'area',v:c.note}],
@@ -149,9 +149,9 @@ A.newEnt=(jid,t,id)=>{
 };
 A.del=(b,kind,id)=>{
   if(!arm(b))return;
-  if(kind==='slip'){D.slips=D.slips.filter(x=>x.id!==id);save();A.back();return}
+  if(kind==='slip'){const sx=slipOf(id);((sx&&sx.imgs)||[]).forEach(idbDel);D.slips=D.slips.filter(x=>x.id!==id);save();A.back();return}
   if(kind==='cust'){const js=D.jobs.filter(j=>j.cust===id).map(j=>j.id);D.entries=D.entries.filter(e=>!js.includes(e.job));D.jobs=D.jobs.filter(j=>j.cust!==id);D.customers=D.customers.filter(c=>c.id!==id);save();A.back();return}
-  if(kind==='job'){D.slips=D.slips.filter(x=>x.job!==id);D.entries=D.entries.filter(e=>e.job!==id);D.jobs=D.jobs.filter(j=>j.id!==id);save();A.back();return}
+  if(kind==='job'){D.slips.filter(x=>x.job===id).forEach(x=>(x.imgs||[]).forEach(idbDel));D.slips=D.slips.filter(x=>x.job!==id);D.entries=D.entries.filter(e=>e.job!==id);D.jobs=D.jobs.filter(j=>j.id!==id);save();A.back();return}
   if(kind==='ent')D.entries=D.entries.filter(e=>e.id!==id);
   if(kind==='ses'){const s=D.sessions.find(x=>x.id===id),M=s&&mac(s.m);if(M&&M.unit==='saat')M.meter=Math.max(0,+(M.meter-s.h).toFixed(2));D.sessions=D.sessions.filter(x=>x.id!==id)}
   if(kind==='mt')D.maint=D.maint.filter(x=>x.id!==id);
@@ -202,7 +202,7 @@ function vAna(){
   ${tm?`<div class="card"><p class="mut" style="text-align:center;margin:0">${esc((mac(tm.m)||{}).name)}${tm.job&&job(tm.job)?' · '+esc(job(tm.job).name):''} çalışıyor</p><div class="huge run" id="tm">${dur(Date.now()-tm.start)}</div><button class="btn r big" onclick="A.stop()">Çalışmayı bitir</button></div>`
   :`<button class="btn y big" style="margin-bottom:12px" onclick="A.tab('sayac')">Çalışmaya başla</button>`}
   <div class="g2 two" style="margin-bottom:12px"><button class="btn r big" onclick="A.quick('gid')">+ Harcama</button><button class="btn g big" onclick="A.quick('hak')">+ Hakediş</button></div>
-  <button class="btn full" style="margin-bottom:12px" onclick="A.quick('slip')">Gün sonu fişi kes</button>
+  <button class="btn full" style="margin-bottom:12px" onclick="A.quick('slip')">Fiş fotoğrafı ekle</button>
   <div class="card stats">${stat('Bugün çalışma',nf(saat,1)+' saat')}${stat('Bugün sefer',sef+' sefer')}${stat('Bu ay alınan',tl(mh),'pos')}${stat('Bu ay harcanan',tl(mg),'neg')}${stat('Bu ay kâr',tl(mh-mg),mh-mg<0?'neg':'pos')}${stat('Toplam alacak',tl(al),al?'neg':'')}</div>
   ${!D.customers.length?`<div class="card"><h2>Başlamak için</h2><ol style="margin:0 0 12px;padding-left:22px;line-height:1.8"><li>Müşteri ekle</li><li>Müşteriye iş ekle (yer seçersen hava durumu görünür)</li><li>Harcama ve hakedişi gir, kâr kendiliğinden hesaplanır</li></ol><button class="btn y full" onclick="A.newCust()">+ İlk müşteriyi ekle</button><button class="btn sm full" style="margin-top:8px" onclick="A.demo()">Örnek veriyle dene</button></div>`
   :`<div class="row" style="margin:4px 0 10px"><h2 class="sp" style="margin:0">Devam eden işler</h2><button class="btn sm" onclick="A.tab('musteri')">Tüm müşteriler</button></div><div class="card list">${act.length?act.slice(0,5).map(j=>{const x=jt(j.id),c=cust(j.cust);return `<div class="it" onclick="A.go('job','${j.id}')"><div class="sp"><b>${esc(j.name)}</b><div class="mut">${esc(c&&c.name)}${j.place?' · '+esc(j.place):''}${wxChip(j)}</div></div><div class="num ${x.kar<0?'neg':'pos'}">${tl(x.kar)}</div></div>`}).join(''):'<div class="empty">Devam eden iş yok.<br>Müşteri sayfasından yeni iş ekle.</div>'}</div>`}
@@ -213,104 +213,53 @@ A.quick=t=>{const act=D.jobs.filter(j=>!j.done);if(act.length===1)goQ(act[0].id,
 A.chosen=(jid,t)=>{ST.pop();goQ(jid,t)};
 function vPick(){
   const t=cur().id,act=D.jobs.filter(j=>!j.done);
-  return `<div class="row">${back}</div><h1>${t==='gid'?'Harcama':t==='hak'?'Hakediş':'Gün sonu fişi'}: hangi iş?</h1><div class="card list">${act.length?act.map(j=>{const c=cust(j.cust);return `<div class="it" onclick="A.chosen('${j.id}','${t}')"><div class="sp"><b>${esc(j.name)}</b><div class="mut">${esc(c&&c.name)}</div></div></div>`}).join(''):'<div class="empty">Önce bir iş eklemen lazım.<br><br><button class="btn sm y" onclick="A.tab(\'musteri\')">Müşterilere git</button></div>'}</div>`;
+  return `<div class="row">${back}</div><h1>${t==='gid'?'Harcama':t==='hak'?'Hakediş':'Fiş fotoğrafı'}: hangi iş?</h1><div class="card list">${act.length?act.map(j=>{const c=cust(j.cust);return `<div class="it" onclick="A.chosen('${j.id}','${t}')"><div class="sp"><b>${esc(j.name)}</b><div class="mut">${esc(c&&c.name)}</div></div></div>`}).join(''):'<div class="empty">Önce bir iş eklemen lazım.<br><br><button class="btn sm y" onclick="A.tab(\'musteri\')">Müşterilere git</button></div>'}</div>`;
 }
 
-/* ---------- İmza ---------- */
-let padDirty=false;
-function initPad(){
-  const cv=document.getElementById('pad');if(!cv)return;
-  const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);
-  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.lineWidth=3;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#171614';padDirty=false;
-  let dr=false,lx=0,ly=0;const pt=e=>{const b=cv.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
-  cv.onpointerdown=e=>{e.preventDefault();dr=true;[lx,ly]=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}x.beginPath();x.moveTo(lx,ly);x.lineTo(lx+.1,ly+.1);x.stroke();padDirty=true};
-  cv.onpointermove=e=>{if(!dr)return;e.preventDefault();const[a,b]=pt(e);x.beginPath();x.moveTo(lx,ly);x.lineTo(a,b);x.stroke();lx=a;ly=b};
-  cv.onpointerup=cv.onpointercancel=()=>{dr=false};
-}
-A.sign=(id,w)=>A.go('sign',id+'|'+w);
-function vSign(){
-  const[id,w]=String(cur().id).split('|');
-  return `<div class="row">${back}</div><h1>${w==='1'?'Operatör imzası':'Teslim alan imzası'}</h1><p class="mut">Parmağınla aşağıdaki kutuya imza at.${w==='1'?' Bu imza kaydedilir, sonraki fişlerde kendiliğinden gelir.':''}</p>
-  <canvas id="pad" style="width:100%;height:240px;background:#fff;border:2px solid var(--line);border-radius:12px;touch-action:none;display:block"></canvas>
-  <div class="g2 two" style="margin-top:12px"><button class="btn big" onclick="A.padClear()">Temizle</button><button class="btn y big" onclick="A.padSave('${id}','${w}')">Kaydet</button></div>`;
-}
-A.padClear=()=>initPad();
-A.padSave=(id,w)=>{
-  const cv=document.getElementById('pad'),s=slipOf(id);if(!cv||!s||!padDirty)return;
-  const sc=document.createElement('canvas');sc.width=400;sc.height=Math.round(cv.height*400/cv.width);sc.getContext('2d').drawImage(cv,0,0,sc.width,sc.height);
-  const u=sc.toDataURL('image/png');if(w==='1'){s.sg1=u;D.settings.sig1=u}else s.sg2=u;
-  save();A.back();
-};
-
-/* ---------- Gün sonu fişi ---------- */
+/* ---------- Fiş fotoğrafları ---------- */
 const slipOf=id=>D.slips.find(x=>x.id===id);
-const UN={Saat:'saat',Sefer:'sefer','Gün':'gün',Sabit:''};
-A.newSlip=(jid,id)=>{
-  const j=job(jid),c=cust(j.cust)||{},td=today(),S=id?slipOf(id):null;let d;
-  if(S)d=S;else{
-    const ss=D.sessions.filter(s=>s.job===jid&&s.date===td);
-    d={date:td,m:ss.length?ss[0].m:(D.lastM||'beko'),t1:ss.length?hm(Math.min(...ss.map(s=>s.start))):'',t2:ss.length?hm(Math.max(...ss.map(s=>s.end))):'',saat:ss.length?+sum(ss,s=>s.h).toFixed(2):'',
-      sefer:sum(D.trips.filter(t=>t.job===jid&&t.date===td),t=>t.n)||'',rate:j.rate||'',unit:j.unit||'Saat',lt:sum(D.entries.filter(e=>e.job===jid&&e.cat==='Mazot'&&e.date===td),e=>e.lt)||'',
-      note:'',firm:c.name||'',work:j.name+(j.place?' · '+j.place:''),op:D.settings.op||'',biz:D.settings.biz||''};
-  }
-  const M0=mac(d.m)||{};
-  A.form(id?'Fişi düzenle':'Gün sonu fişi',[
-    {k:'date',l:'Tarih',type:'date',v:d.date},{k:'firm',l:'Firma / müşteri',v:d.firm},{k:'work',l:'Yapılan iş / yer',v:d.work},
-    {k:'m',l:'Makine',opts:D.machines.map(m=>[m.id,m.name]),v:d.m},{k:'plate',l:'Plaka / seri no',v:d.plate??M0.plate??''},{k:'op',l:'Operatör',v:d.op},
-    {k:'t1',l:'Başlangıç saati',type:'time',v:d.t1},{k:'t2',l:'Bitiş saati',type:'time',v:d.t2},{k:'saat',l:'Toplam çalışma (saat)',type:'number',v:d.saat},
-    {k:'sefer',l:'Sefer sayısı (kamyon)',type:'number',v:d.sefer},{k:'unit',l:'Ücret neye göre?',opts:['Saat','Sefer','Gün','Sabit'].map(x=>[x,x]),v:d.unit},
-    {k:'rate',l:'Birim ücret (₺)',type:'number',v:d.rate},{k:'lt',l:'Mazot (litre)',type:'number',v:d.lt},{k:'biz',l:'İşletme / ad soyad (fiş başlığı)',v:d.biz},{k:'note',l:'Not',type:'area',v:d.note}],
-  v=>{
-    if(!+v.saat&&v.t1&&v.t2){const a=v.t1.split(':').map(Number),b=v.t2.split(':').map(Number);let mm=(b[0]*60+b[1])-(a[0]*60+a[1]);if(mm<0)mm+=1440;v.saat=+(mm/60).toFixed(2)}
-    v.saat=+v.saat||0;v.sefer=+v.sefer||0;v.rate=+v.rate||0;v.lt=+v.lt||0;
-    v.amt=v.unit==='Saat'?v.saat*v.rate:v.unit==='Sefer'?v.sefer*v.rate:v.rate;
-    const M=mac(v.m);if(M)M.plate=v.plate;D.settings.op=v.op;D.settings.biz=v.biz;j.rate=v.rate;j.unit=v.unit;
-    if(id)Object.assign(S,v);else{const y=(v.date||td).slice(0,4),n=D.slips.filter(x=>(x.date||'').startsWith(y)).length+1,sid=uid();D.slips.push({id:sid,job:jid,no:y+'-'+String(n).padStart(3,'0'),...v,sg1:D.settings.sig1||''});setTimeout(()=>A.go('slip',sid),0)}
-  });
+let phTmp=[],phUrl={};
+const idb=()=>new Promise((res,rej)=>{if(idb.p)return res(idb.p);const q=indexedDB.open('sahaFis',1);q.onupgradeneeded=()=>q.result.createObjectStore('img');q.onsuccess=()=>res(idb.p=q.result);q.onerror=()=>rej(q.error)});
+const idbPut=async(k,b)=>{const d=await idb();return new Promise((r,j)=>{const t=d.transaction('img','readwrite');t.objectStore('img').put(b,k);t.oncomplete=r;t.onerror=()=>j(t.error)})};
+const idbGet=async k=>{const d=await idb();return new Promise((r,j)=>{const q=d.transaction('img').objectStore('img').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})};
+const idbDel=async k=>{try{const d=await idb();return new Promise(r=>{const t=d.transaction('img','readwrite');t.objectStore('img').delete(k);t.oncomplete=r;t.onerror=r})}catch(e){}};
+const shrink=f=>new Promise((res,rej)=>{const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{const k=Math.min(1,1600/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(),'image/jpeg',.7)};i.onerror=rej;i.src=u});
+const phHtml=()=>phTmp.map((k,i)=>`<div style="position:relative"><img src="${phUrl[k]||''}" alt="fiş" style="width:100%;border-radius:10px;display:block;min-height:40px;background:var(--line)"><button type="button" class="btn sm r" style="position:absolute;top:6px;right:6px" onclick="A.phDel(${i})">Sil</button></div>`).join('');
+const phRender=()=>{const e=document.getElementById('phBox');if(e)e.innerHTML=phHtml()};
+const photoSection=()=>`<label style="margin-top:16px">Fiş fotoğrafı</label><button type="button" class="btn y full" onclick="this.nextElementSibling.click()">Fotoğraf çek / galeriden seç</button><input type="file" accept="image/*" multiple style="display:none" onchange="A.ph(this)"><p class="mut" id="phMsg" style="margin:6px 0 0"></p><div id="phBox" style="display:grid;gap:8px;margin-top:8px">${phHtml()}</div>`;
+A.ph=async inp=>{
+  const fs=[...inp.files];inp.value='';const m=document.getElementById('phMsg');
+  for(const f of fs){try{if(m)m.textContent='Fotoğraf işleniyor…';const b=await shrink(f),k='p'+uid();await idbPut(k,b);phUrl[k]=URL.createObjectURL(b);phTmp.push(k);phRender()}catch(e){if(m)m.textContent='Fotoğraf eklenemedi.';return}}
+  if(m)m.textContent='';
 };
-function slipRows(s){
-  const M=mac(s.m)||{},r=[['Fiş no',s.no],['Tarih',fd(s.date)],['Firma',s.firm],['Yapılan iş',s.work],['Makine',(M.name||'')+(s.plate?' · '+s.plate:'')],['Operatör',s.op]];
-  if(s.t1||s.t2)r.push(['Çalışma saatleri',(s.t1||'')+' – '+(s.t2||'')]);
-  if(s.saat)r.push(['Toplam süre',nf(s.saat,2)+' saat']);
-  if(s.sefer)r.push(['Sefer',s.sefer+' sefer']);
-  if(s.lt)r.push(['Mazot',nf(s.lt,0)+' lt']);
-  if(s.rate)r.push(['Birim ücret',tl(s.rate)+(UN[s.unit]?' / '+UN[s.unit]:'')]);
-  if(s.note)r.push(['Not',s.note]);
-  return r.filter(x=>x[1]);
-}
-const slipText=s=>[s.biz||'Saha Defteri','GÜNLÜK ÇALIŞMA FİŞİ',...slipRows(s).map(x=>x[0]+': '+x[1]),'TUTAR: '+tl(s.amt)].join('\n');
+A.phDel=i=>{phTmp.splice(i,1);phRender()};
+A.newSlip=(jid,id)=>{
+  const S=id?slipOf(id):null,d=S||{date:today(),amt:'',saat:'',sefer:'',note:''};
+  phTmp=[...(d.imgs||[])];const orig=[...phTmp];
+  phTmp.forEach(async k=>{if(!phUrl[k]){try{const b=await idbGet(k);if(b)phUrl[k]=URL.createObjectURL(b)}catch(e){}phRender()}});
+  A.form(id?'Fişi düzenle':'Fiş ekle',[{k:'date',l:'Fiş tarihi',type:'date',v:d.date},{k:'amt',l:'Fişteki tutar (₺)',type:'number',v:d.amt},{k:'saat',l:'Çalışma saati (isteğe bağlı)',type:'number',v:d.saat},{k:'sefer',l:'Sefer sayısı (isteğe bağlı)',type:'number',v:d.sefer},{k:'note',l:'Not',type:'area',v:d.note}],
+  v=>{v.amt=+v.amt||0;v.saat=+v.saat||0;v.sefer=+v.sefer||0;v.imgs=[...phTmp];orig.filter(k=>!phTmp.includes(k)).forEach(idbDel);
+    if(id)Object.assign(S,v);else D.slips.push({id:uid(),job:jid,...v})},null,photoSection);
+};
 function slipBlock(jid){
   const ss=D.slips.filter(x=>x.job===jid).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  return `<div class="card"><button class="btn y full" onclick="A.newSlip('${jid}')">Gün sonu fişi kes</button>${ss.length?`<div class="list" style="margin-top:8px">${ss.map(s=>`<div class="it" onclick="A.go('slip','${s.id}')"><div class="sp"><b>Fiş ${esc(s.no)}</b><div class="mut">${fd(s.date)}${s.saat?' · '+nf(s.saat,1)+' saat':''}${s.sefer?' · '+s.sefer+' sefer':''}</div></div><div class="num">${tl(s.amt)}</div></div>`).join('')}</div>`:''}</div>`;
+  return `<div class="card"><button class="btn y full" onclick="A.newSlip('${jid}')">Fiş fotoğrafı ekle</button>${ss.length?`<div class="list" style="margin-top:8px">${ss.map(s=>`<div class="it" onclick="A.go('slip','${s.id}')"><div class="sp"><b>Fiş · ${fd(s.date)}</b><div class="mut">${(s.imgs||[]).length} fotoğraf${s.saat?' · '+nf(s.saat,1)+' saat':''}${s.sefer?' · '+s.sefer+' sefer':''}</div></div><div class="num">${tl(s.amt)}</div></div>`).join('')}</div>`:''}</div>`;
 }
 function vSlip(){
-  const s=slipOf(cur().id),rows=slipRows(s),line='display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #ddd';
-  const sg=w=>{const u=s['sg'+w];return `<div style="text-align:center"><div style="height:72px;display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="A.sign('${s.id}','${w}')">${u?`<img src="${u}" alt="imza" style="max-height:68px;max-width:100%">`:`<span class="btn sm y">İmzala</span>`}</div><div style="border-top:1px solid #171614;padding-top:4px;font-size:12px">${w==='1'?'Teslim eden (operatör)':'Teslim alan (firma yetkilisi)'}</div></div>`};
+  const s=slipOf(cur().id),j=job(s.job)||{},c=cust(j.cust)||{};
   return `<div class="row">${back}<span class="sp"></span><button class="btn sm" onclick="A.newSlip('${s.job}','${s.id}')">Düzenle</button></div>
-  <div class="card" style="background:#fff;color:#171614;border:2px solid #171614;margin-top:12px"><div style="text-align:center;border-bottom:2px dashed #999;padding-bottom:10px;margin-bottom:6px"><b style="font-size:20px">${esc(s.biz||'Saha Defteri')}</b><div style="font-weight:800;letter-spacing:.06em">GÜNLÜK ÇALIŞMA FİŞİ</div></div>
-  ${rows.map(([a,b])=>`<div style="${line}"><span style="color:#68645d;font-size:14px">${esc(a)}</span><b style="text-align:right">${esc(b)}</b></div>`).join('')}
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 4px"><b>TUTAR</b><b style="font-size:28px">${tl(s.amt)}</b></div>
-  <div class="g2 two" style="margin-top:22px;gap:16px">${sg('1')}${sg('2')}</div></div>
-  <button class="btn g big" style="margin-bottom:8px" onclick="A.slipWa('${s.id}')">WhatsApp ile gönder</button>
-  <button class="btn y full" onclick="A.slipImg('${s.id}',this)">Resim olarak kaydet / paylaş</button>
+  <p class="mut" style="margin:10px 0 0">${esc(c.name)} · ${esc(j.name)}</p><h1>Fiş · ${fd(s.date)}</h1>
+  <div class="card stats">${stat('Tutar',tl(s.amt),'pos')}${s.saat?stat('Süre',nf(s.saat,1)+' saat'):''}${s.sefer?stat('Sefer',s.sefer+' sefer'):''}</div>
+  ${s.note?`<div class="card"><b>Not</b><p style="margin:6px 0 0">${esc(s.note)}</p></div>`:''}
+  <div id="slipImgs" style="display:grid;gap:10px"></div>
   <button class="btn sm r" style="margin-top:12px" onclick="A.del(this,'slip','${s.id}')">Fişi sil</button>`;
 }
-A.slipWa=id=>{const s=slipOf(id),c=cust((job(s.job)||{}).cust)||{};window.open('https://wa.me/'+waNum(c.phone)+'?text='+encodeURIComponent(slipText(s)),'_blank')};
-A.slipImg=async(id,b)=>{
-  const s0=slipOf(id),li=u=>new Promise(r=>{if(!u)return r(null);const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=u}),[g1,g2]=await Promise.all([li(s0.sg1),li(s0.sg2)]);
-  const s=s0,rows=slipRows(s),W=900,pad=40,rh=62,H=200+rows.length*rh+230,FN='Archivo,system-ui,sans-serif';
-  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
-  x.fillStyle='#fff';x.fillRect(0,0,W,H);x.fillStyle='#f5b301';x.fillRect(0,0,W,150);
-  x.fillStyle='#171614';x.textAlign='center';x.font='800 40px '+FN;x.fillText((s.biz||'Saha Defteri').slice(0,34),W/2,70);x.font='700 28px '+FN;x.fillText('GÜNLÜK ÇALIŞMA FİŞİ',W/2,118);
-  let y=200;
-  rows.forEach(([a,v])=>{x.textAlign='left';x.fillStyle='#68645d';x.font='400 26px '+FN;x.fillText(a,pad,y);x.textAlign='right';x.fillStyle='#171614';x.font='700 28px '+FN;x.fillText(String(v).slice(0,36),W-pad,y);x.fillStyle='#ddd';x.fillRect(pad,y+18,W-2*pad,2);y+=rh});
-  x.fillStyle='#171614';x.textAlign='left';x.font='800 34px '+FN;x.fillText('TUTAR',pad,y+30);x.textAlign='right';x.font='800 48px '+FN;x.fillText(tl(s.amt),W-pad,y+34);
-  y+=130;const dg=(g,cx)=>{if(!g)return;let h=76,w=g.width*h/g.height;if(w>340){w=340;h=g.height*w/g.width}x.drawImage(g,cx-w/2,y-h-6,w,h)};dg(g1,pad+180);dg(g2,W-pad-180);x.fillRect(pad,y,360,2);x.fillRect(W-pad-360,y,360,2);x.textAlign='center';x.font='400 22px '+FN;x.fillText('Teslim eden (operatör)',pad+180,y+34);x.fillText('Teslim alan (firma yetkilisi)',W-pad-180,y+34);
-  x.strokeStyle='#171614';x.lineWidth=4;x.strokeRect(2,2,W-4,H-4);
-  cv.toBlob(async bl=>{const f=new File([bl],'fis-'+s.no+'.png',{type:'image/png'});
-    try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Çalışma fişi '+s.no});return}}catch(e){if(e&&e.name==='AbortError')return}
-    const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=f.name;document.body.appendChild(a);a.click();a.remove();b.textContent='Kaydedildi ✓'});
-};
+async function loadSlipImgs(){
+  const s=slipOf(cur().id),box=document.getElementById('slipImgs');if(!s||!box)return;
+  if(!(s.imgs||[]).length){box.innerHTML='<p class="mut">Fotoğraf yok.</p>';return}
+  for(const k of s.imgs){try{if(!phUrl[k]){const b=await idbGet(k);if(b)phUrl[k]=URL.createObjectURL(b)}
+    if(phUrl[k]&&document.getElementById('slipImgs')===box)box.insertAdjacentHTML('beforeend',`<img src="${phUrl[k]}" alt="fiş fotoğrafı" style="width:100%;border-radius:12px;display:block" onclick="window.open(this.src,'_blank')">`)}catch(e){}}
+}
 
 /* ---------- Müşteriler ---------- */
 function vMusteri(){
@@ -341,7 +290,7 @@ function vJob(id){
   const lt=sum(es.filter(e=>e.cat==='Mazot'),e=>e.lt);
   return `<div class="row">${back}<span class="sp"></span><button class="btn sm" onclick="A.newJob('${j.cust}','${id}')">Düzenle</button></div>
   <p class="mut" style="margin:10px 0 0">${esc(c&&c.name)}${j.place?' · '+esc(j.place):''}</p><h1>${esc(j.name)} ${j.done?'<span class="tag">Bitti</span>':''}</h1>
-  <div class="card stats">${x.ag?stat('Anlaşılan ücret',tl(x.ag)):''}${stat('Alınan hakediş',tl(x.hak),'pos')}${stat('Harcanan',tl(x.gid),'neg')}${stat('Net kâr',tl(x.kar),x.kar<0?'neg':'pos')}${x.ag?stat('Kalan alacak',tl(x.alacak),x.alacak?'neg':''):''}${stat('Çalışma',nf(x.saat)+' saat')}${stat('Sefer',x.sefer+' sefer')}${lt?stat('Mazot',nf(lt,0)+' lt'):''}</div>
+  <div class="card stats">${x.ag?stat('Anlaşılan ücret',tl(x.ag)):''}${x.fis?stat('Fiş toplamı',tl(x.fis)):''}${stat('Alınan hakediş',tl(x.hak),'pos')}${stat('Harcanan',tl(x.gid),'neg')}${stat('Net kâr',tl(x.kar),x.kar<0?'neg':'pos')}${(x.ag||x.fis)?stat('Kalan alacak',tl(x.alacak),x.alacak?'neg':''):''}${stat('Çalışma',nf(x.saat)+' saat')}${stat('Sefer',x.sefer+' sefer')}${lt?stat('Mazot',nf(lt,0)+' lt'):''}</div>
   ${wxCard(j)}<div class="g2 two"><button class="btn r big" onclick="A.newEnt('${id}','gid')">+ Harcama</button><button class="btn g big" onclick="A.newEnt('${id}','hak')">+ Hakediş</button></div>
   <div class="card list" style="margin-top:12px">${es.length?es.map(e=>`<div class="it" onclick="A.newEnt('${id}','${e.t}','${e.id}')"><div class="sp"><b>${e.t==='hak'?'Hakediş':esc(e.cat)}</b>${e.t==='hak'&&e.cat?` <span class="tag">${esc(e.cat)}</span>`:''}<div class="mut">${fd(e.date)}${e.lt?' · '+nf(e.lt,0)+' lt':''}${e.note?' · '+esc(e.note):''}</div></div><div class="num ${e.t==='hak'?'pos':'neg'}">${e.t==='hak'?'+':'−'}${tl(e.amt)}</div></div>`).join(''):'<div class="empty">Harcama veya hakediş ekleyince burada listelenir.<br>Düzeltmek için satıra dokun.</div>'}</div>
   ${slipBlock(id)}<div class="row"><button class="btn" onclick="A.done('${id}')">${j.done?'Devam ediyor yap':'İş bitti olarak işaretle'}</button><button class="btn sm r" onclick="A.del(this,'job','${id}')">İşi sil</button></div>
@@ -421,7 +370,7 @@ function vAyar(){
   <h2 style="margin-top:20px">Malzeme oranları</h2><p class="mut">Kabarma: kazılınca hacim yüzde kaç artar. Sıkışma: sıkıştırılınca yerinde haline göre yüzde kaç olur (100 = aynı).</p>
   <table><thead><tr><th>Malzeme</th><th>Kabarma %</th><th>Sıkışma %</th></tr></thead><tbody>${Object.entries(MATS).map(([k,v])=>`<tr><td>${v[0]}</td><td><input id="sw_${k}" inputmode="decimal" value="${nf(ms[k].sw)}" aria-label="${v[0]} kabarma"></td><td><input id="cp_${k}" inputmode="decimal" value="${nf(ms[k].cp)}" aria-label="${v[0]} sıkışma"></td></tr>`).join('')}</tbody></table>
   <button class="btn y full" style="margin-top:12px" onclick="A.saveSet(this)">Kaydet</button><button class="btn sm" style="margin-top:8px" onclick="A.resetMats()">Varsayılan oranlara dön</button></div>
-  <div class="card"><h2>Yedek</h2><p class="mut">Veriler bu telefonda saklanır. Arada bir yedeği kopyalayıp WhatsApp'tan kendine gönder.</p>
+  <div class="card"><h2>Yedek</h2><p class="mut">Veriler bu telefonda saklanır. Arada bir yedeği kopyalayıp WhatsApp'tan kendine gönder. Fiş fotoğrafları yedeğe dahil değildir.</p>
   <button class="btn y full" onclick="A.copy(this)">Yedeği kopyala</button><label for="imp">Yedeği geri yükle (buraya yapıştır)</label><textarea id="imp"></textarea><button class="btn full" style="margin-top:8px" onclick="A.imp(this)">Geri yükle</button></div>
   <div class="card"><h2>Tüm verileri sil</h2><button class="btn r" onclick="A.del(this,'all')">Her şeyi sil</button></div>`;
 }
@@ -440,8 +389,8 @@ const IC={
 const NAV=[['ana','Ana'],['musteri','Müşteri'],['sayac','Sayaç'],['hesap','Hesap'],['bakim','Bakım']];
 function render(){
   const c=cur();
-  if((c.p==='cust'&&!cust(c.id))||(c.p==='job'&&!job(c.id))||(c.p==='form'&&!F)||(c.p==='slip'&&!slipOf(c.id))||(c.p==='sign'&&!slipOf(String(c.id).split('|')[0]))){ST.pop();return render()}
-  const V={ana:vAna,pick:vPick,slip:vSlip,sign:vSign,musteri:vMusteri,cust:()=>vCust(c.id),job:()=>vJob(c.id),form:vForm,sayac:vSayac,hesap:vHesap,bakim:vBakim,ayar:vAyar};
+  if((c.p==='cust'&&!cust(c.id))||(c.p==='job'&&!job(c.id))||(c.p==='form'&&!F)||(c.p==='slip'&&!slipOf(c.id))){ST.pop();return render()}
+  const V={ana:vAna,pick:vPick,slip:vSlip,musteri:vMusteri,cust:()=>vCust(c.id),job:()=>vJob(c.id),form:vForm,sayac:vSayac,hesap:vHesap,bakim:vBakim,ayar:vAyar};
   document.getElementById('app').innerHTML=(V[c.p]||vMusteri)();
   const t=ST[0].p,od=overdue();
   document.getElementById('nav').innerHTML=NAV.map(([k,l])=>`<button class="${t===k?'on':''}" onclick="A.tab('${k}')"${t===k?' aria-current="page"':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>${l}${k==='bakim'&&od?'<span class="dot" aria-label="Geçmiş bakım var"></span>':''}</button>`).join('');
@@ -459,11 +408,12 @@ function bind(){
   const map={cMat:'mat',cSt:'st',cMode:'mode',cEn:'en',cBoy:'boy',cDer:'der',cM3:'m3',cKasa:'kasa',cFiyat:'fiyat'};
   for(const id in map){const el=document.getElementById(id);if(!el)continue;el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{D.calc[map[id]]=el.value;save();if(id==='cMode')render();else calcRes()})}
   calcRes();
-  if(cur().p==='sign')initPad();
+  if(cur().p==='slip')loadSlipImgs();
   const cc=cur();if(cc.p==='cust'||cc.p==='ana')D.jobs.filter(j=>(cc.p==='ana'||j.cust===cc.id)&&!j.done&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]&&!((D.wx||{})[j.id]&&Date.now()-D.wx[j.id].t<36e5)).slice(0,5).forEach(j=>setTimeout(()=>A.wx(j.id),0));if(cc.p==='job'){const j=job(cc.id);if(j&&j.lat!=null&&!wxBusy[j.id]&&!wxErr[j.id]){const w=(D.wx||{})[j.id];if(!w||Date.now()-w.t>36e5)setTimeout(()=>A.wx(j.id),0)}}
 }
 setInterval(()=>{const e=document.getElementById('tm');if(e&&D.timer)e.textContent=dur(Date.now()-D.timer.start)},1000);
 render();
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
 }
 </script>
