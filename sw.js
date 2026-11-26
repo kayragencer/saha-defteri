@@ -1,4 +1,4 @@
-const V='sd-v1';
+const V='sd-v2';
 const ASSETS=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','icon.svg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
@@ -8,7 +8,7 @@ self.addEventListener('fetch',e=>{
   const font=/(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(u.hostname);
   if(u.origin!==location.origin&&!font)return;
   if(r.mode==='navigate'){
-    e.respondWith(fetch(r).then(res=>{const cp=res.clone();caches.open(V).then(c=>c.put('index.html',cp));return res}).catch(()=>caches.match('index.html')));
+    e.respondWith(fetch(r,{cache:'no-store'}).then(res=>{const cp=res.clone();caches.open(V).then(c=>c.put('index.html',cp));return res}).catch(()=>caches.match('index.html')));
     return;
   }
   e.respondWith(caches.match(r,{ignoreSearch:true}).then(hit=>{

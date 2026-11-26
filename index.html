@@ -466,7 +466,7 @@ function bind(){
 setInterval(()=>{const e=document.getElementById('tm');if(e&&D.timer)e.textContent=dur(Date.now()-D.timer.start)},1000);
 render();
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
-if('serviceWorker' in navigator)addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
+if('serviceWorker' in navigator)addEventListener('load',()=>{(navigator.serviceWorker.controller&&navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload()),navigator.serviceWorker.register('sw.js',{updateViaCache:'none'})).catch(()=>{})});
 }
 </script>
 </body>
