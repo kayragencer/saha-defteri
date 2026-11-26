@@ -210,7 +210,7 @@ function vAna(){
   ${due.length?`<div class="card"><div class="row"><h2 class="sp" style="margin:0 0 6px">Bakım uyarısı</h2><button class="btn sm" onclick="A.tab('bakim')">Aç</button></div>${due.map(o=>`<div style="color:${o.s.lvl===2?'var(--red)':'var(--org)'};font-weight:700;margin-top:4px">${esc(o.M.name)} · ${esc(o.x.name)}: ${o.s.txt}</div>`).join('')}</div>`:''}`;
 }
 const goQ=(id,t)=>t==='slip'?A.newSlip(id,null,1):A.newEnt(id,t,null,1);
-A.quick=t=>{const act=D.jobs.filter(j=>!j.done);if(!act.length)A.tab('musteri');else goQ((act.find(j=>j.id===D.lastJob)||act[0]).id,t)};
+A.quick=t=>{const act=D.jobs.filter(j=>!j.done);if(!act.length){let c=D.customers.find(x=>x.name==='Genel');if(!c){c={id:uid(),name:'Genel',phone:'',addr:'',note:''};D.customers.push(c)}const j={id:uid(),cust:c.id,name:'Genel iş',date:today(),agreed:0,place:'',done:false};D.jobs.push(j);D.lastJob=j.id;save();goQ(j.id,t)}else goQ((act.find(j=>j.id===D.lastJob)||act[0]).id,t)};
 A.chosen=(jid,t)=>{ST.pop();goQ(jid,t)};
 function vPick(){
   const t=cur().id,act=D.jobs.filter(j=>!j.done);
